@@ -520,6 +520,29 @@ const D = JSON.parse(document.getElementById("data").textContent);
 const T = D.t, P = D.places, N = T.length;
 // Prévision (prevision.py) : deux modèles, « jour/nuit » et « jour/nuit/boulot » ; FC est celui affiché.
 const FCS = D.fc || { ok: false };
+// Prévision calculée sur un relevé antérieur (elle n'est refaite qu'une fois par heure) : on recale toutes les
+// projections sur le dernier relevé, en gardant les gains prévus à partir de maintenant.
+(function rebaseFC() {
+  if (!FCS.ok || !FCS.models || !FCS.at || FCS.at >= T[N - 1] - 60e3) return;
+  const G = FCS.grid, t1 = T[N - 1], keep = [];
+  for (let i = 0; i < G.length; i++) if (G[i] > t1) keep.push(i);
+  if (!keep.length) return;
+  const at = (arr) => { if (t1 <= G[0]) return arr[0];
+    for (let i = 1; i < G.length; i++) if (t1 <= G[i]) return arr[i - 1] + (arr[i] - arr[i - 1]) * (t1 - G[i - 1]) / (G[i] - G[i - 1]);
+    return arr[arr.length - 1]; };
+  const shift = (arr, v) => { const a0 = at(arr); return [v, ...keep.map((i) => arr[i] - a0 + v)]; };
+  const byId = new Map(P.map((p) => [p.id, p]));
+  for (const md of Object.values(FCS.models)) {
+    const fix = (f, v) => {
+      const d0 = v - at(f.c);
+      for (const k of ["c", "q10", "q50", "q90", "lin"]) if (f[k]) f[k] = shift(f[k], v);
+      if (f.draws) f.draws = f.draws.map((x) => Math.round(x + d0));
+    };
+    fix(md.total, P.reduce((s, p) => s + p.v[N - 1], 0));   // (le tableau `total` n'existe pas encore ici)
+    for (const [pid, f] of Object.entries(md.places)) if (byId.has(pid)) fix(f, byId.get(pid).v[N - 1]);
+  }
+  FCS.grid = [t1, ...keep.map((i) => G[i])];
+})();
 const FC_MODELS = FCS.models || (FCS.ok ? { jn: { ...FCS, name: "Jour/nuit" } } : {});   // ancien format : un seul modèle
 let fcModel = FC_MODELS[FCS.best] ? FCS.best : "jn";
 const pickFC = () => (FCS.ok && FC_MODELS[fcModel] ? { ...FCS, ...FC_MODELS[fcModel] } : FCS);
@@ -1350,7 +1373,8 @@ function renderForecast() {
   const endTxt = FC.isEnd ? `Jusqu'à la clôture du vote, ${fDay.format(tEnd)} à ${fTime.format(tEnd)}` : `Jusqu'au ${fmtWhen(tEnd)}`;
   const hm = (x) => `${Math.floor(x)} h${Math.round(x % 1 * 60) ? String(Math.round(x % 1 * 60)).padStart(2, "0") : ""}`;
   $("fc-sub").textContent = `${endTxt} · ` + (FC.diurnal ? `cycle jour/nuit mesuré : ±${Math.round(FC.diurnal.a * 100)} %, pointe vers ${hm(FC.diurnal.peak)} (Paris)`
-    : `profil horaire mesuré : ${FC.peaks && FC.peaks.length ? "pointes vers " + FC.peaks.map(hm).join(", ") : "pas de pointe nette"} (Paris)`);
+    : `profil horaire mesuré : ${FC.peaks && FC.peaks.length ? "pointes vers " + FC.peaks.map(hm).join(", ") : "pas de pointe nette"} (Paris)`)
+    + (FCS.at ? ` · modèles ajustés sur le relevé de ${fTime.format(FCS.at)} (recalcul une fois par heure)` : "");
   const seg = $("seg-fcm"); seg.replaceChildren();
   for (const [key, m] of Object.entries(FC_MODELS)) {
     const b = el("button", { "data-v": key, "aria-pressed": String(key === fcModel), text: m.name + (key === FCS.best && Object.keys(FC_MODELS).length > 1 ? " ★" : "") }, seg);
@@ -1404,7 +1428,7 @@ function renderForecast() {
   const d = pathFor(S.v, 0, x, y);
   el("svg:path", { d: d.solid, fill: "none", stroke: "var(--accent)", "stroke-width": 2.5, "stroke-linejoin": "round" }, svg);
   if (d.dashed) el("svg:path", { d: d.dashed, fill: "none", stroke: "var(--accent)", "stroke-width": 1.5, "stroke-dasharray": "3 4", opacity: .8 }, svg);
-  el("svg:path", { d: line(T, f.fit), fill: "none", stroke: "var(--s2)", "stroke-width": 1.5, opacity: .9 }, svg);
+  el("svg:path", { d: line(T.slice(0, f.fit.length), f.fit), fill: "none", stroke: "var(--s2)", "stroke-width": 1.5, opacity: .9 }, svg);
   el("svg:path", { d: line(G, f.q50), fill: "none", stroke: "var(--s2)", "stroke-width": 2, "stroke-dasharray": "6 5", "stroke-linecap": "round" }, svg);
   el("svg:circle", { cx: x(tLast), cy: y(last), r: 4, fill: "var(--accent)", stroke: "var(--surface)", "stroke-width": 2 }, svg);
   const cross = el("svg:line", { y1: m.t, y2: m.t + ih, stroke: "var(--muted)", "stroke-dasharray": "3 3", visibility: "hidden" }, svg);
@@ -1418,7 +1442,7 @@ function renderForecast() {
       const i = nearest(T, t); t = T[i];
       el("div", { cls: "h", text: `${fDay.format(t)} · ${fTime.format(t)}` }, tip);
       tipRow(tip, "var(--accent)", nf.format(S.v[i]), "voix mesurées");
-      tipRow(tip, "var(--s2)", nf.format(Math.round(f.fit[i])), "modèle ajusté");
+      if (f.fit[i] !== undefined) tipRow(tip, "var(--s2)", nf.format(Math.round(f.fit[i])), "modèle ajusté");
     } else {
       const i = nearest(G, t); t = G[i];
       el("div", { cls: "h", text: `${fDay.format(t)} · ${fTime.format(t)} · prévision` }, tip);

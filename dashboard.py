@@ -43,21 +43,47 @@ def load():
     return wide, meta
 
 
+# La prévision (deux modèles + tests rétrospectifs) coûte 1 à 2 min de calcul sur tous les cœurs : on ne la refait
+# qu'une fois par heure de relevés et on réutilise la dernière entre-temps (la page recale ses projections sur le
+# dernier relevé). SOS_PREVISION_FORCE=1 force le recalcul.
+FC_CACHE = HERE / "prevision_cache.json"
+FC_REFRESH_MIN = 55
+
+
 def forecast_safe(wide):
     """Prévision (prevision.py) ; une erreur de fit ne doit jamais empêcher de produire le tableau de bord."""
+    import os
+    t_last = int(wide.index[-1].timestamp() * 1000)
+    if not os.environ.get("SOS_PREVISION_FORCE"):
+        try:
+            cached = json.loads(FC_CACHE.read_text(encoding="utf-8"))
+            if (cached.get("ok") and cached.get("models") and 0 <= t_last - cached["at"] < FC_REFRESH_MIN * 60e3
+                    and set(cached["models"]["jn"]["places"]) == set(wide.columns)):
+                cached["fresh"] = False
+                return cached
+        except Exception:  # noqa: BLE001 — pas de cache ou cache illisible : on recalcule
+            pass
     try:
         from prevision import forecast
-        return forecast(wide)
+        fc = forecast(wide)
     except Exception as e:  # noqa: BLE001
         print(f"[prévision] échec : {e!r}")
         return {"ok": False, "why": "Prévision indisponible pour ce relevé."}
+    fc["at"] = t_last
+    if fc.get("ok"):
+        try:
+            FC_CACHE.write_text(json.dumps(fc, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        except OSError as e:
+            print(f"[prévision] cache non écrit : {e!r}")
+    fc["fresh"] = True
+    return fc
 
 
 def history_safe(fc, wide):
     """Enregistre la prévision du moment (une fois par heure) et renvoie tout l'historique pour la page Bilan."""
     try:
         from prevision import load_history, record
-        if fc.get("ok") and fc.get("models"):
+        if fc.get("ok") and fc.get("models") and fc.get("fresh"):   # une prévision réutilisée est déjà enregistrée
             record(fc, wide)
         return load_history()
     except Exception as e:  # noqa: BLE001

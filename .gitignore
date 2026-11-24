@@ -2,3 +2,4 @@
 __pycache__/
 *.pyc
 suivi.log
+prevision_cache.json
