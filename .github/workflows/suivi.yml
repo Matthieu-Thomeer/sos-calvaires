@@ -1,8 +1,9 @@
 name: Suivi des votes
 
+# Relevé automatique désactivé : le suivi tourne en local (lancer_suivi.sh). Pour le réactiver, remettre :
+#   schedule:
+#     - cron: "*/10 * * * *"   # toutes les 10 min (GitHub peut retarder de quelques minutes)
 on:
-  schedule:
-    - cron: "*/10 * * * *"   # toutes les 10 min (GitHub peut retarder de quelques minutes)
   workflow_dispatch:          # bouton « Run workflow » pour lancer à la main
 
 permissions:
