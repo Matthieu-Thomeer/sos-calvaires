@@ -24,7 +24,7 @@ if not exist "%VENV%\Scripts\python.exe" (
 )
 
 call "%VENV%\Scripts\activate.bat"
-echo [suivi] Acquisition toutes les 300 s. Ctrl+C pour arreter.
+echo [suivi] Acquisition toutes les 5 min (hh:00, hh:05, hh:10...). Ctrl+C pour arreter.
 python suivi_votes.py --interval 300
 
 pause

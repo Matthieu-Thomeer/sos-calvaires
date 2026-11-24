@@ -5,6 +5,7 @@ Lit votes.csv et produit :
   - dashboard.html        : tableau de bord interactif autonome (données intégrées) ;
   - votes_normalise.png   : croissance de chaque lieu en % de ses propres voix (pentes comparables) ;
   - votes_total.png       : total des voix et voix gagnées d'une heure à l'autre.
+La prévision (modèle non linéaire, voir prevision.py) est intégrée au tableau de bord.
 
 Usage :
   python dashboard.py
@@ -42,6 +43,16 @@ def load():
     return wide, meta
 
 
+def forecast_safe(wide):
+    """Prévision (prevision.py) ; une erreur de fit ne doit jamais empêcher de produire le tableau de bord."""
+    try:
+        from prevision import forecast
+        return forecast(wide)
+    except Exception as e:  # noqa: BLE001
+        print(f"[prévision] échec : {e!r}")
+        return {"ok": False, "why": "Prévision indisponible pour ce relevé."}
+
+
 def build_html(wide, meta):
     places = []
     for pid in wide.columns:
@@ -57,6 +68,7 @@ def build_html(wide, meta):
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "t": [int(ts.timestamp() * 1000) for ts in wide.index],
         "places": places,
+        "fc": forecast_safe(wide),
     }
     payload = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     html = TEMPLATE.read_text(encoding="utf-8").replace("/*__DATA__*/{}", payload)

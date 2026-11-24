@@ -164,6 +164,11 @@ td .zero { color: var(--muted); }
 .duel-sum > div { background: var(--surface); padding: 14px 16px; display: grid; gap: 4px; align-content: start; min-width: 0; }
 .duel-big { font-family: var(--f-display); font-size: 30px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .duel-big.inf { font-size: 44px; line-height: 1; }
+.duel-big.txt { font-size: 22px; }
+.duel-big.late { color: var(--muted); }
+.duel-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 20px; margin: 4px 0 6px; }
+.duel-two > div { display: grid; gap: 4px; align-content: start; min-width: 0; }
+.duel-m { font-size: 12px; font-weight: 600; color: var(--ink2); }
 .duel-line { font-size: 14px; }
 .duel-line b { font-weight: 600; }
 .duel-c .nm { display: flex; gap: 8px; align-items: center; font-weight: 600; min-width: 0; }
@@ -172,9 +177,40 @@ td .zero { color: var(--muted); }
 .duel-c .v { font-family: var(--f-display); font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .duel-c .d { font-size: 12.5px; color: var(--ink2); }
 .h3 { font-size: 14px; font-weight: 700; }
+.fc-sum { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+@media (max-width: 900px) { .fc-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .fc-sum { grid-template-columns: 1fr; } }
+.fc-sum > div { background: var(--surface); padding: 14px 16px; display: grid; gap: 4px; align-content: start; min-width: 0; }
+.fc-sum .v { font-family: var(--f-display); font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.fc-sum .d { font-size: 12.5px; color: var(--ink2); }
+#fc-tbl tbody tr { cursor: pointer; }
+#fc-tbl tr.cur { background: var(--accent-wash); }
+.fc-how { font-size: 13px; color: var(--ink2); }
+.fc-how summary { cursor: pointer; color: var(--ink); font-weight: 600; }
+.fc-how p { margin: 8px 0 0; max-width: 90ch; }
 #duel-tbl tbody tr { cursor: pointer; }
 #duel-tbl td .loc { font-size: 11.5px; color: var(--muted); }
 .inf-s { font-size: 18px; font-weight: 600; color: var(--ink2); }
+.tabs { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid var(--line); }
+#an-night { min-width: 0; }
+.tabs a { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; color: var(--ink2); text-decoration: none; font: 600 14px var(--f-display);
+  border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.tabs a:hover { color: var(--ink); }
+.tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tabs .badge { font: 600 11px var(--f-mono); padding: 1px 7px; border-radius: 999px; background: var(--flat-wash); color: var(--flat); }
+.tabs .badge.hot { background: var(--crit-wash); color: var(--crit); }
+.page { display: grid; gap: 20px; min-width: 0; }
+.page[hidden] { display: none; }
+#an-tbl tbody tr, #an-night tbody tr { cursor: pointer; }
+#an-tbl td .why { font-size: 12px; color: var(--ink2); margin-top: 2px; max-width: 60ch; }
+.pill.crit { color: var(--crit); background: var(--crit-wash); }
+.pill.night { color: var(--accent); background: var(--accent-wash); }
+.pills { display: flex; flex-wrap: wrap; gap: 4px; }
+.heatwrap { overflow-x: auto; position: relative; }
+.heatwrap svg { display: block; }
+.heatwrap .rowlab { cursor: pointer; }
+.heatwrap .rowlab:hover text { fill: var(--ink); }
+.empty { color: var(--ink2); font-size: 13.5px; padding: 8px 0; }
 footer { color: var(--muted); font-size: 12px; display: grid; gap: 4px; }
 .toast { position: fixed; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
   background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; }
@@ -191,12 +227,19 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 4px; }
     <div class="meta"><span class="live" id="live"></span><span id="stamp"></span><span aria-hidden="true">·</span><span id="refresh"></span></div>
   </header>
 
+  <nav class="tabs" aria-label="Pages">
+    <a href="#" id="tab-main">Tableau de bord</a>
+    <a href="#anomalies" id="tab-anom">Anomalies <span class="badge" id="an-badge"></span></a>
+  </nav>
+
+  <div class="page" id="page-main">
   <section class="kpis" id="kpis" aria-label="Indicateurs clés"></section>
 
   <div class="controls" role="group" aria-label="Filtres">
     <div><span class="ctl-label">Période</span>
       <span class="seg" id="seg-win">
         <button data-v="all" aria-pressed="true">Tout le suivi</button>
+        <button data-v="cont" title="Relevés continus uniquement : ignore le suivi troué d'avant">Depuis 24 nov. 13:35</button>
         <button data-v="180">3 h</button>
         <button data-v="60">1 h</button>
       </span></div>
@@ -251,11 +294,54 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 4px; }
     <div class="tablewrap"><table class="ptable" id="ptbl"><thead></thead><tbody></tbody></table></div>
   </section>
 
+  <section class="card" id="fc">
+    <div class="card-h">
+      <div><h2>Prévision</h2>
+        <div class="sub" id="fc-sub"></div></div>
+      <label class="pick" style="flex:0 1 380px"><span class="sr">Série</span><select id="fc-sel"></select></label>
+    </div>
+    <div><span class="ctl-label">Modèle</span><span class="seg" id="seg-fcm" role="group" aria-label="Modèle de prévision"></span></div>
+    <div class="fc-sum" id="fc-sum"></div>
+    <div class="legend" aria-hidden="true">
+      <span class="chip ghost" style="cursor:default"><span class="k" style="background:var(--accent)"></span>Mesuré</span>
+      <span class="chip ghost" style="cursor:default"><span class="k" style="background:var(--s2)"></span>Modèle ajusté</span>
+      <span class="chip ghost" style="cursor:default"><span class="k" style="background:repeating-linear-gradient(90deg,var(--s2) 0 4px,transparent 4px 7px)"></span>Prévision du modèle</span>
+      <span class="chip ghost" style="cursor:default"><span class="k" style="background:var(--s2);opacity:.25;height:8px"></span>Fourchette 10–90 %</span>
+      <span class="chip ghost" style="cursor:default"><span class="k" style="background:repeating-linear-gradient(90deg,var(--muted) 0 2px,transparent 2px 5px)"></span>Projection linéaire</span>
+    </div>
+    <div class="chart" id="fc-chart"></div>
+    <div class="hint" id="fc-bt"></div>
+    <div><h3 class="h3">Cycle horaire</h3>
+      <div class="sub">Rythme de chaque heure, en multiple du rythme moyen de la journée (heure de Paris). Les points sont les heures réellement relevées ; plus ils sont gros, plus ils reposent sur des voix.</div></div>
+    <div class="legend" aria-hidden="true">
+      <span class="chip ghost" style="cursor:default"><span class="k" style="background:var(--s3)"></span>Jour/nuit/boulot</span>
+      <span class="chip ghost" style="cursor:default"><span class="k" style="background:repeating-linear-gradient(90deg,var(--s7) 0 4px,transparent 4px 7px)"></span>Jour/nuit</span>
+      <span class="chip ghost" style="cursor:default"><span class="k" style="background:var(--ink2);height:8px;width:8px;border-radius:50%"></span>Observé</span>
+    </div>
+    <div class="chart" id="fc-cyc"></div>
+    <div><h3 class="h3">Classement prévu</h3>
+      <div class="sub">Cliquer une ligne pour afficher le lieu dans le graphique.</div></div>
+    <div class="tablewrap"><table class="ptable" id="fc-tbl"><thead></thead><tbody></tbody></table></div>
+    <details class="fc-how"><summary>Comment est calculée la prévision ?</summary>
+      <p>Le débit de voix de chaque lieu est modélisé par <b>(fond + boost) × cycle horaire</b> :
+        un rythme de fond, plus un boost dû aux appels au vote qui s'amortit exponentiellement (sa demi-vie dit à quelle vitesse
+        l'effet retombe), le tout modulé par l'heure de la journée. Deux modèles diffèrent par la forme de ce cycle :</p>
+      <p><b>Jour/nuit</b> : une seule vague de 24 h, une pointe et un creux, commune à tous les lieux et mesurée sur le total.</p>
+      <p><b>Jour/nuit/boulot</b> : un profil horaire libre (vagues de 24, 12, 8 et 6 h superposées) qui peut avoir une pointe le matin,
+        un creux à midi et une pointe le soir. Une pénalité de lissage l'empêche d'onduler sans raison : une heure jamais relevée est
+        interpolée entre ses voisines. Chaque lieu peut s'écarter du profil commun, d'autant plus qu'il a de voix. Le lissage et
+        l'écart permis aux lieux sont choisis par un test rétrospectif interne, sur les seules données d'entraînement.</p>
+      <p>L'ajustement porte sur les voix gagnées entre deux relevés, trous de relevé compris. La fourchette tient compte de
+        l'incertitude sur les paramètres et du hasard des votes, <b>pas</b> d'un nouvel appel au vote à venir, qui ferait repartir un lieu à la hausse.
+        Le test rétrospectif refait le calcul sans les dernières heures et compare au résultat réel, pour savoir s'il faut croire le modèle ou la droite.</p>
+    </details>
+  </section>
+
   <section class="card" id="duel">
     <div class="card-h">
       <div><h2>Duel entre deux lieux</h2>
-        <div class="sub">Quand le lieu de derrière passera-t-il devant ? Projection au rythme actuel de chacun.</div></div>
-      <div><span class="ctl-label">Rythme calculé sur</span>
+        <div class="sub">Quand le lieu de derrière passera-t-il devant ? Deux projections : le modèle choisi dans la carte Prévision (fond + boost amorti × cycle horaire) et la droite au rythme actuel.</div></div>
+      <div><span class="ctl-label">Rythme linéaire calculé sur</span>
         <span class="seg" id="seg-basis" role="group" aria-label="Rythme calculé sur">
           <button data-v="60">1 h</button><button data-v="180" aria-pressed="true">3 h</button><button data-v="all">Tout le suivi</button>
         </span></div>
@@ -272,7 +358,9 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 4px; }
     </div>
     <div class="legend" aria-hidden="true">
       <span class="chip ghost" style="cursor:default"><span class="k" style="background:var(--ink2)"></span>Mesuré</span>
-      <span class="chip ghost" style="cursor:default"><span class="k" style="background:repeating-linear-gradient(90deg,var(--ink2) 0 4px,transparent 4px 7px)"></span>Projection</span>
+      <span class="chip ghost" style="cursor:default"><span class="k" style="background:repeating-linear-gradient(90deg,var(--ink2) 0 5px,transparent 5px 8px)"></span>Modèle</span>
+      <span class="chip ghost" style="cursor:default"><span class="k" style="background:var(--ink2);opacity:.2;height:8px"></span>Fourchette 10–90 % du modèle</span>
+      <span class="chip ghost" style="cursor:default"><span class="k" style="background:repeating-linear-gradient(90deg,var(--ink2) 0 2px,transparent 2px 5px)"></span>Linéaire</span>
     </div>
     <div class="chart" id="duel-chart"></div>
     <div><h3 class="h3">Face à tous les autres : lieu A, <span id="duel-vs"></span></h3>
@@ -291,6 +379,92 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 4px; }
     <div class="multiples" id="multiples"></div>
   </section>
 
+  </div>
+
+  <div class="page" id="page-anom" hidden>
+    <section class="kpis" id="an-kpis" aria-label="Résumé des anomalies"></section>
+    <div class="controls" role="group" aria-label="Réglages de la détection">
+      <div><span class="ctl-label">Découpage</span>
+        <span class="seg" id="seg-abin"><button data-v="15">15 min</button><button data-v="30">30 min</button><button data-v="60">1 h</button></span></div>
+      <div><span class="ctl-label">Sensibilité</span>
+        <span class="seg" id="seg-asens"><button data-v="strict">Stricte</button><button data-v="normal">Normale</button><button data-v="large">Large</button></span></div>
+      <div><span class="ctl-label">Données</span>
+        <span class="seg" id="seg-adata"><button data-v="all">Tout le suivi</button><button data-v="cont" id="adata-cont">Relevés continus</button></span></div>
+    </div>
+
+    <section class="card">
+      <div class="card-h"><div><h2>Événements détectés</h2>
+        <div class="sub">Un lieu qui gagne nettement plus de voix que sa part habituelle de l'activité, alors que les autres ne suivent pas. Du plus marqué au moins marqué. Cliquer une ligne pour voir le lieu en détail.</div></div></div>
+      <div class="tablewrap"><table class="ptable" id="an-tbl"><thead></thead><tbody></tbody></table></div>
+      <div class="empty" id="an-empty" hidden></div>
+      <div class="hint" id="an-calib"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-h"><div><h2>Carte des écarts</h2>
+        <div class="sub" id="an-heat-sub"></div></div></div>
+      <div class="legend" aria-hidden="true">
+        <span class="chip ghost" style="cursor:default"><span class="k" style="background:var(--crit);opacity:.25;height:10px;width:12px"></span>Un peu plus que d'habitude</span>
+        <span class="chip ghost" style="cursor:default"><span class="k" style="background:var(--crit);height:10px;width:12px"></span>Bien plus (×8 et au-delà)</span>
+        <span class="chip ghost" style="cursor:default"><span class="k" style="background:transparent;border:1.5px solid var(--ink);height:10px;width:12px"></span>Anomalie retenue</span>
+        <span class="chip ghost" style="cursor:default"><span class="k" style="background:var(--accent-wash);height:10px;width:12px"></span>Nuit (0 h – 6 h)</span>
+        <span class="chip ghost" style="cursor:default"><span class="k" style="background:repeating-linear-gradient(45deg,var(--muted) 0 1px,transparent 1px 4px);height:10px;width:12px"></span>Plus d'1 h sans relevé (non analysé)</span>
+      </div>
+      <div class="heatwrap" id="an-heat"></div>
+    </section>
+
+    <div class="grid2">
+      <section class="card" id="an-det">
+        <div class="card-h">
+          <div><h2>Détail d'un lieu</h2><div class="sub" id="an-det-sub"></div></div>
+          <label class="pick" style="flex:0 1 340px"><span class="sr">Lieu</span><select id="an-sel"></select></label>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span class="chip ghost" style="cursor:default"><span class="k" style="background:var(--accent);height:8px"></span>Voix gagnées</span>
+          <span class="chip ghost" style="cursor:default"><span class="k" style="background:var(--crit);height:8px"></span>Anomalie</span>
+          <span class="chip ghost" style="cursor:default"><span class="k" style="background:var(--ink)"></span>Attendu d'après l'activité des autres</span>
+          <span class="chip ghost" style="cursor:default"><span class="k" style="background:var(--ink);opacity:.15;height:10px"></span>Fourchette normale (10–90 %)</span>
+          <span class="chip ghost" style="cursor:default"><span class="k" style="background:repeating-linear-gradient(90deg,var(--crit) 0 3px,transparent 3px 5px)"></span>Seuil d'anomalie (sensibilité choisie)</span>
+        </div>
+        <div class="chart" id="an-det-chart"></div>
+      </section>
+      <section class="card">
+        <div class="card-h"><div><h2>Activité de nuit (0 h – 6 h)</h2>
+          <div class="sub" id="an-night-sub"></div></div></div>
+        <div class="tablewrap"><table class="ptable" id="an-night"><thead></thead><tbody></tbody></table></div>
+        <div class="hint"><b>Voix de nuit</b> : voix gagnées par le lieu entre 0 h et 6 h, sur les tranches analysées.
+          <b>Attendues</b> : ce qu'il aurait reçu si, la nuit, il gardait sa part de jour de l'activité des autres.
+          <b>Part nuit / jour</b> : sa part de toutes les voix de nuit, puis de toutes les voix de jour. Un lieu bien plus présent la nuit que le jour
+          ressort ; « Anormal » n'apparaît que si l'écart dépasse le hasard attendu.</div>
+      </section>
+    </div>
+
+    <details class="fc-how card"><summary>Comment sont détectées les anomalies ?</summary>
+      <p><b>Part habituelle.</b> Sur tout le suivi, chaque lieu reçoit une certaine part des voix gagnées par l'ensemble des lieux. Sur chaque tranche
+        (15 min, 30 min ou 1 h), on calcule les voix qu'il <i>aurait dû</i> gagner : sa part habituelle appliquée aux voix gagnées par les autres sur
+        la même tranche (la tranche testée est exclue du calcul de l'habitude). Un vote de masse qui touche tout le monde ne ressort donc pas ;
+        seul ce qui est propre à un lieu ressort.</p>
+      <p><b>Hasard attendu.</b> Les voix n'arrivent pas une par une : un message partagé dans un groupe en amène plusieurs d'un coup. Le test utilise donc
+        une loi binomiale négative, plus large qu'une loi de Poisson. Sa dispersion φ (1 = voix indépendantes) est mesurée sur les données, tous lieux
+        confondus, puis ajustée pour chaque lieu selon ses propres écarts, d'autant plus qu'il a de tranches mesurées. S'y ajoute l'incertitude
+        sur la part habituelle : pour un lieu qui n'a reçu que quelques voix, l'attendu lui-même est imprécis.</p>
+      <p><b>Étalonnage.</b> Sous ce modèle, une force d'au moins 3 (une chance sur 1 000) ne devrait toucher par hasard qu'au plus une tranche sur 1 000.
+        Le contrôle sous le tableau compare ce nombre au nombre réellement observé : beaucoup plus d'écarts que prévu signale soit de vraies anomalies,
+        soit un modèle encore trop optimiste.</p>
+      <p><b>Pic isolé.</b> Le lieu gagne bien plus que prévu, avec un écart trop grand pour être du hasard. Il est marqué
+        <b>« seul à progresser »</b> quand il prend à lui seul plus de 60 % des voix de la tranche.</p>
+      <p><b>Accélération isolée.</b> Sur la dernière heure, la part du lieu dans l'activité est plusieurs fois celle des 3 heures d'avant, sans que les autres accélèrent autant.</p>
+      <p><b>Nuit.</b> Entre 0 h et 6 h (heure de Paris), on compare les voix du lieu à ce que sa part de jour laisse attendre, vu l'activité nocturne des autres.
+        Seules les nuits effectivement relevées comptent.</p>
+      <p><b>Trous de relevé.</b> Quand il manque plus d'1 h de relevés, on ne sait pas quand les voix sont arrivées : ces périodes ne sont pas analysées
+        (zones hachurées) et n'entrent ni dans la dispersion ni dans l'étalonnage. Les voix gagnées pendant ces trous comptent seulement dans la part habituelle de chaque lieu.</p>
+      <p><b>Données.</b> « Tout le suivi » utilise tout l'historique, trous compris, pour établir la part habituelle de chaque lieu.
+        « Depuis le 24 nov. 13:35 » ne garde que les relevés continus : l'habitude est plus fiable, mais repose sur moins d'heures,
+        donc les seuils sont plus prudents au début.</p>
+      <p>Une anomalie n'est pas une preuve de fraude : une relance par e-mail ou un message dans un groupe produit le même signal. Elle signale ce qui mérite un coup d'œil.</p>
+    </details>
+  </div>
+
   <footer>
     <div>Source : compteurs publics de vote.soscalvaires.org, relevés automatiquement. Heures de Paris.</div>
     <div>Croissance = voix gagnées depuis le début de la période ÷ voix du lieu au début de la période. Une pente identique signifie le même rythme relatif, quelle que soit la taille du lieu. Les bandes grises marquent les périodes sans relevé.</div>
@@ -304,6 +478,12 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 4px; }
 "use strict";
 const D = JSON.parse(document.getElementById("data").textContent);
 const T = D.t, P = D.places, N = T.length;
+// Prévision (prevision.py) : deux modèles, « jour/nuit » et « jour/nuit/boulot » ; FC est celui affiché.
+const FCS = D.fc || { ok: false };
+const FC_MODELS = FCS.models || (FCS.ok ? { jn: { ...FCS, name: "Jour/nuit" } } : {});   // ancien format : un seul modèle
+let fcModel = FC_MODELS[FCS.best] ? FCS.best : "jn";
+const pickFC = () => (FCS.ok && FC_MODELS[fcModel] ? { ...FCS, ...FC_MODELS[fcModel] } : FCS);
+let FC = pickFC();
 const GAP_MS = 25 * 60e3, H = 3600e3;
 const TZ = "Europe/Paris";
 const fTime = new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
@@ -334,6 +514,7 @@ try { const s = JSON.parse(store.get("sos-state") || "null"); if (s) { state.win
 
 function windowStart() {
   if (state.win === "all") return 0;
+  if (state.win === "cont") return Math.min(N - 2, idxAtOrAfter(CONT_FROM));
   const t0 = T[N - 1] - (+state.win) * 60e3;
   let i = 0; while (i < N - 2 && T[i] < t0 - 60e3) i++;
   return i;
@@ -822,12 +1003,45 @@ function parisOffset(t) {
   const d = new Date(t);
   return Date.parse(d.toLocaleString("en-US", { timeZone: TZ })) - Date.parse(d.toLocaleString("en-US", { timeZone: "UTC" }));
 }
+/* Projection du modèle différentiel (prevision.py) : courbe centrale sur FC.grid, tirages à la clôture. */
+const fcOk = () => FC.ok && FC.places;
+function interpG(arr, t) {
+  const G = FC.grid; if (t <= G[0]) return arr[0];
+  for (let i = 1; i < G.length; i++) if (t <= G[i]) return arr[i - 1] + (arr[i] - arr[i - 1]) * (t - G[i - 1]) / (G[i] - G[i - 1]);
+  return arr[arr.length - 1];
+}
+function modelCross(a, b) {
+  if (!fcOk()) return null;
+  const G = FC.grid, fa = FC.places[a.id], fb = FC.places[b.id], ca = fa.c, cb = fb.c, k = G.length - 1;
+  const va = a.v[N - 1], vb = b.v[N - 1], s0 = Math.sign(va - vb);
+  // chances que A soit devant à la clôture (tirages indépendants des deux lieux)
+  let pA = null;
+  if (fa.draws && fb.draws) { let w = 0; const n = Math.min(fa.draws.length, fb.draws.length);
+    for (let i = 0; i < n; i++) w += fa.draws[i] > fb.draws[i] ? 1 : fa.draws[i] === fb.draws[i] ? 0.5 : 0; pA = w / n; }
+  const out = { pA, gapEnd: ca[k] - cb[k], ra: fa.baseNow, rb: fb.baseNow, hours: Infinity };
+  if (s0 === 0) return { ...out, tie: true };
+  out.lead = s0 > 0 ? a : b; out.chase = s0 > 0 ? b : a;
+  for (let i = 1; i <= k; i++) {
+    const d = ca[i] - cb[i];
+    if (s0 > 0 ? d < 0 : d > 0) {
+      const d0 = ca[i - 1] - cb[i - 1], f = d0 / (d0 - d), t = G[i - 1] + f * (G[i] - G[i - 1]);
+      return { ...out, t, hours: (t - T[N - 1]) / H };
+    }
+  }
+  return out;
+}
+const closeT = () => (fcOk() ? FC.end : Infinity);
+const closeTxt = () => (fcOk() && FC.isEnd ? "avant la clôture" : "sur l'horizon de prévision");
+/* Un dépassement compte s'il arrive avant la clôture (ou dans les deux semaines sans date de clôture connue). */
+const inTime = (hours) => isFinite(hours) && T[N - 1] + hours * H <= Math.min(closeT(), T[N - 1] + MAX_PROJ_H * H);
+
 function defaultDuel() {
   const ranked = P.slice().sort((x, y) => y.v[N - 1] - x.v[N - 1]);
   let best = null;
   for (let k = 0; k + 1 < ranked.length; k++) {
-    const c = crossing(ranked[k], ranked[k + 1], duel.basis);
-    if (!c.tie && isFinite(c.hours) && (!best || c.hours < best.h)) best = { a: ranked[k + 1].id, b: ranked[k].id, h: c.hours };
+    const mc = modelCross(ranked[k + 1], ranked[k]), lc = crossing(ranked[k], ranked[k + 1], duel.basis);
+    const h = Math.min(mc && !mc.tie ? mc.hours : Infinity, !lc.tie ? lc.hours : Infinity);
+    if (isFinite(h) && (!best || h < best.h)) best = { a: ranked[k + 1].id, b: ranked[k].id, h };
   }
   duel.a = best ? best.a : ranked[1].id; duel.b = best ? best.b : ranked[0].id;
 }
@@ -844,30 +1058,52 @@ function renderDuel(i0) {
   if (!duel.a || !duel.b) defaultDuel();
   fillSelects();
   for (const b of $("seg-basis").querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.v === duel.basis));
-  const A = byIdP.get(duel.a), B = byIdP.get(duel.b), c = crossing(A, B, duel.basis);
+  const A = byIdP.get(duel.a), B = byIdP.get(duel.b), c = crossing(A, B, duel.basis), mc = modelCross(A, B);
   const basisTxt = duel.basis === "all" ? "sur tout le suivi" : duel.basis === "60" ? "sur la dernière heure" : "sur les 3 dernières heures";
   const tLast = T[N - 1];
-
-  // Verdict
-  const v = $("duel-verdict"); v.replaceChildren();
-  el("div", { cls: "eyebrow", text: "Dépassement prévu" }, v);
-  const big = el("div", { cls: "duel-big" }, v), line = el("div", { cls: "duel-line" }, v), why = el("div", { cls: "sub" }, v);
   const nameB = (p) => ({ b: p.name });
   const put = (node, parts) => parts.forEach((p) => (typeof p === "string" ? node.append(p) : el("b", { text: p.b }, node)));
-  if (c.tie) {
-    big.textContent = "À égalité";
-    put(line, ["Les deux lieux ont exactement le même nombre de voix."]);
-  } else if (isFinite(c.hours)) {
-    big.textContent = "dans " + fmtDur(c.hours);
-    put(line, [nameB(c.chase), " passe devant ", nameB(c.lead), c.hours <= MAX_PROJ_H ? `, ${fmtWhen(tLast + c.hours * H)}` : ", dans plus de deux semaines"]);
-    put(why, [`Il reprend ${nf1.format(c.rc - c.rl)} voix/h sur un écart de ${nf.format(c.gap)} voix (rythmes ${basisTxt}).`]);
-  } else {
-    big.textContent = "∞"; big.classList.add("inf"); big.title = "Jamais au rythme actuel";
-    put(line, [nameB(c.chase), " ne rattrape jamais ", nameB(c.lead), " à ce rythme."]);
-    put(why, [c.rc === c.rl ? `Même rythme (${nf1.format(c.rc)} voix/h ${basisTxt}) : l'écart de ${nf.format(c.gap)} voix reste stable.`
-      : `${c.lead.name} creuse l'écart de ${nf1.format(c.rl - c.rc)} voix/h ${basisTxt} (écart actuel : ${nf.format(c.gap)} voix).`]);
+
+  // Verdict : modèle et linéaire côte à côte
+  const v = $("duel-verdict"); v.replaceChildren();
+  el("div", { cls: "eyebrow", text: "Dépassement prévu" }, v);
+  const two = el("div", { cls: "duel-two" }, v);
+  const block = (label) => { const d = el("div", {}, two); el("div", { cls: "duel-m", text: label }, d);
+    return { big: el("div", { cls: "duel-big" }, d), line: el("div", { cls: "duel-line" }, d), why: el("div", { cls: "sub" }, d) }; };
+
+  if (mc) {
+    const m = block("Modèle (fond + boost × jour/nuit)");
+    if (mc.tie) { m.big.textContent = "À égalité"; put(m.line, ["Même nombre de voix aujourd'hui."]); }
+    else if (isFinite(mc.hours)) {
+      m.big.textContent = "dans " + fmtDur(mc.hours);
+      put(m.line, [nameB(mc.chase), " passe devant ", nameB(mc.lead), `, ${fmtWhen(mc.t)}`]);
+    } else {
+      m.big.textContent = FC.isEnd ? "Pas avant la clôture" : "Pas sur l'horizon"; m.big.classList.add("txt");
+      put(m.line, [nameB(mc.chase), " reste derrière ", nameB(mc.lead), `, avec environ ${nf.format(Math.round(Math.abs(mc.gapEnd)))} voix d'écart à la fin.`]);
+    }
+    put(m.why, [`Rythmes moyens sur 24 h : ${nf1.format(mc.ra)} et ${nf1.format(mc.rb)} voix/h, cycle jour/nuit compris.`]);
   }
-  el("div", { cls: "hint", text: "Projection linéaire au rythme choisi : elle change si l'un des lieux accélère ou ralentit." }, v);
+  const l = block(`Linéaire (rythme ${basisTxt})`);
+  if (c.tie) { l.big.textContent = "À égalité"; put(l.line, ["Les deux lieux ont exactement le même nombre de voix."]); }
+  else if (isFinite(c.hours)) {
+    l.big.textContent = "dans " + fmtDur(c.hours);
+    const late = !inTime(c.hours);
+    if (late) l.big.classList.add("late");
+    put(l.line, [nameB(c.chase), " passe devant ", nameB(c.lead),
+      tLast + c.hours * H > closeT() ? " : trop tard, après la clôture." : c.hours <= MAX_PROJ_H ? `, ${fmtWhen(tLast + c.hours * H)}` : ", dans plus de deux semaines"]);
+    put(l.why, [`Il reprend ${nf1.format(c.rc - c.rl)} voix/h sur un écart de ${nf.format(c.gap)} voix.`]);
+  } else {
+    l.big.textContent = "∞"; l.big.classList.add("inf"); l.big.title = "Jamais au rythme actuel";
+    put(l.line, [nameB(c.chase), " ne rattrape jamais ", nameB(c.lead), " à ce rythme."]);
+    put(l.why, [c.rc === c.rl ? `Même rythme (${nf1.format(c.rc)} voix/h) : l'écart de ${nf.format(c.gap)} voix reste stable.`
+      : `${c.lead.name} creuse l'écart de ${nf1.format(c.rl - c.rc)} voix/h (écart actuel : ${nf.format(c.gap)} voix).`]);
+  }
+  if (mc && mc.pA !== null) {
+    const pr = el("div", { cls: "duel-line" }, v);
+    put(pr, [`Chances d'être devant ${FC.isEnd ? "à la clôture" : "à la fin de l'horizon"} (modèle) : `, nameB(A), ` ${Math.round(mc.pA * 100)} %, `, nameB(B), ` ${Math.round((1 - mc.pA) * 100)} %.`]);
+  }
+  el("div", { cls: "hint", text: mc ? "Le modèle tient compte du ralentissement des appels au vote et du cycle jour/nuit, la droite non. Le test rétrospectif de la carte Prévision dit lequel est le plus fiable en ce moment."
+    : "Projection linéaire au rythme choisi : elle change si l'un des lieux accélère ou ralentit." }, v);
 
   // Fiches A / B
   const ranks = new Map(P.slice().sort((x, y) => y.v[N - 1] - x.v[N - 1]).map((p, k) => [p.id, k + 1]));
@@ -877,25 +1113,32 @@ function renderDuel(i0) {
     el("span", { text: p.name }, h);
     el("div", { cls: "v", text: nf.format(p.v[N - 1]) }, box);
     el("div", { cls: "d", text: `${ranks.get(p.id)}e · ${nf1.format(r)} voix/h ${basisTxt}` }, box);
+    if (fcOk()) { const f = FC.places[p.id], kk = FC.grid.length - 1;
+      el("div", { cls: "d", text: `Prévu ${FC.isEnd ? "à la clôture" : "en fin d'horizon"} : ${nf.format(Math.round(f.q50[kk]))} (${nf.format(Math.round(f.q10[kk]))} – ${nf.format(Math.round(f.q90[kk]))})` }, box); }
   }
 
-  renderDuelChart(i0, A, B, c);
+  renderDuelChart(i0, A, B, c, mc);
   renderDuelTable(A);
 }
 
-function renderDuelChart(i0, A, B, c) {
+function renderDuelChart(i0, A, B, c, mc) {
   const box = $("duel-chart"); box.replaceChildren();
   const tLast = T[N - 1], hist = tLast - T[i0];
   let tEnd = tLast + Math.max(hist * 0.35, 2 * H);
-  const showCross = !c.tie && isFinite(c.hours) && c.hours <= MAX_PROJ_H;
-  if (showCross) tEnd = Math.max(tEnd, tLast + c.hours * H * 1.15);
-  const W = box.clientWidth || 900, Hh = 300, m = { l: 58, r: 16, t: 14, b: 28 }, iw = W - m.l - m.r, ih = Hh - m.t - m.b;
+  const showCross = !c.tie && inTime(c.hours);
+  if (fcOk()) tEnd = FC.end;
+  else if (showCross) tEnd = Math.max(tEnd, tLast + c.hours * H * 1.15);
+  const W = box.clientWidth || 900, Hh = 320, m = { l: 58, r: 16, t: 14, b: 28 }, iw = W - m.l - m.r, ih = Hh - m.t - m.b;
   const proj = (p, r, t) => p.v[N - 1] + r * (t - tLast) / H;
   const all = [];
-  for (const [p, r] of [[A, c.ra], [B, c.rb]]) { for (let i = i0; i < N; i++) all.push(p.v[i]); all.push(proj(p, r, tEnd)); }
+  for (const [p, r] of [[A, c.ra], [B, c.rb]]) {
+    for (let i = i0; i < N; i++) all.push(p.v[i]);
+    all.push(proj(p, r, tEnd));
+    if (fcOk()) { const f = FC.places[p.id]; all.push(...f.q10, ...f.q90); }
+  }
   const yt = niceTicks(Math.min(...all), Math.max(...all), 5), y0 = yt[0], y1 = yt[yt.length - 1];
   const x = (t) => m.l + (t - T[i0]) / (tEnd - T[i0]) * iw, y = (v) => m.t + ih - (v - y0) / (y1 - y0 || 1) * ih;
-  const svg = el("svg:svg", { viewBox: `0 0 ${W} ${Hh}`, height: Hh, role: "img", "aria-label": `Voix de ${A.name} et ${B.name}, avec projection` }, box);
+  const svg = el("svg:svg", { viewBox: `0 0 ${W} ${Hh}`, height: Hh, role: "img", "aria-label": `Voix de ${A.name} et ${B.name}, avec projections` }, box);
   drawGaps(svg, i0, x, m.t, ih);
   el("svg:rect", { x: x(tLast), y: m.t, width: Math.max(0, x(tEnd) - x(tLast)), height: ih, fill: "var(--accent-wash)", opacity: .5 }, svg);
   for (const v of yt) { const g = el("svg:g", { cls: "tick" }, svg);
@@ -912,35 +1155,60 @@ function renderDuelChart(i0, A, B, c) {
   }
   el("svg:line", { x1: x(tLast), x2: x(tLast), y1: m.t, y2: m.t + ih, stroke: "var(--muted)", "stroke-width": 1 }, svg);
   el("svg:text", { x: x(tLast) + 6, y: m.t + 11, text: "projection →", style: "font-size:10.5px;fill:var(--muted)" }, svg);
+  const G = fcOk() ? FC.grid : null;
+  const line = (ts, vs) => ts.map((t, i) => `${i ? "L" : "M"}${x(t).toFixed(1)},${y(vs[i]).toFixed(1)}`).join("");
+  for (const [p, r, col] of [[A, c.ra, "var(--s1)"], [B, c.rb, "var(--s2)"]]) {
+    if (G) {
+      const f = FC.places[p.id], k = G.length - 1;
+      const band = line(G, f.q90) + G.slice().reverse().map((t, i) => `L${x(t).toFixed(1)},${y(f.q10[k - i]).toFixed(1)}`).join("") + "Z";
+      el("svg:path", { d: band, fill: col, opacity: .13, stroke: "none" }, svg);
+    }
+  }
   for (const [p, r, col] of [[A, c.ra, "var(--s1)"], [B, c.rb, "var(--s2)"]]) {
     const d = pathFor(p.v.slice(i0), i0, x, y);
     el("svg:path", { d: d.solid, fill: "none", stroke: col, "stroke-width": 2, "stroke-linejoin": "round" }, svg);
     if (d.dashed) el("svg:path", { d: d.dashed, fill: "none", stroke: col, "stroke-width": 1.5, "stroke-dasharray": "2 3", opacity: .8 }, svg);
-    el("svg:line", { x1: x(tLast), y1: y(p.v[N - 1]), x2: x(tEnd), y2: y(proj(p, r, tEnd)), stroke: col, "stroke-width": 2, "stroke-dasharray": "6 5", "stroke-linecap": "round" }, svg);
+    el("svg:line", { x1: x(tLast), y1: y(p.v[N - 1]), x2: x(tEnd), y2: y(proj(p, r, tEnd)), stroke: col, "stroke-width": 1.5, "stroke-dasharray": "1.5 4", "stroke-linecap": "round", opacity: .9 }, svg);
+    if (G) el("svg:path", { d: line(G, FC.places[p.id].c), fill: "none", stroke: col, "stroke-width": 2, "stroke-dasharray": "7 5", "stroke-linecap": "round" }, svg);
     el("svg:circle", { cx: x(tLast), cy: y(p.v[N - 1]), r: 4, fill: col, stroke: "var(--surface)", "stroke-width": 2 }, svg);
   }
-  if (showCross) {
-    const tc = tLast + c.hours * H, vc = proj(A, c.ra, tc);
-    el("svg:circle", { cx: x(tc), cy: y(vc), r: 6, fill: "var(--surface)", stroke: "var(--ink)", "stroke-width": 2 }, svg);
-    const right = x(tc) > m.l + iw * 0.7;
-    el("svg:text", { x: x(tc) + (right ? -10 : 10), y: y(vc) - 10, "text-anchor": right ? "end" : "start",
-      text: `Dépassement · ${fmtWhen(tc)}`, style: "font-size:11.5px;font-weight:600;fill:var(--ink)" }, svg);
-  } else if (!c.tie && isFinite(c.hours)) {
-    el("svg:text", { x: m.l + iw - 4, y: m.t + 11, "text-anchor": "end", text: `croisement hors graphique (${fmtDur(c.hours)}) →`, style: "font-size:10.5px;fill:var(--muted)" }, svg);
+  const mark = (tc, vc, label, strong, below) => {
+    el("svg:circle", { cx: x(tc), cy: y(vc), r: strong ? 6 : 5, fill: "var(--surface)", stroke: strong ? "var(--ink)" : "var(--muted)", "stroke-width": 2 }, svg);
+    const right = x(tc) > m.l + iw * 0.6;
+    el("svg:text", { x: x(tc) + (right ? -10 : 10), y: y(vc) + (below ? 20 : -10), "text-anchor": right ? "end" : "start",
+      text: label, style: `font-size:11.5px;font-weight:600;fill:var(${strong ? "--ink" : "--ink2"})` }, svg);
+  };
+  if (mc && !mc.tie && isFinite(mc.hours)) mark(mc.t, interpG(FC.places[A.id].c, mc.t), `Modèle · ${fmtWhen(mc.t)}`, true, false);
+  if (showCross && tLast + c.hours * H <= tEnd) { const tc = tLast + c.hours * H; mark(tc, proj(A, c.ra, tc), `Linéaire · ${fmtWhen(tc)}`, false, true); }
+  else if (!c.tie && isFinite(c.hours)) {
+    el("svg:text", { x: m.l + iw - 4, y: m.t + 11, "text-anchor": "end", style: "font-size:10.5px;fill:var(--muted)",
+      text: tLast + c.hours * H > closeT() ? `linéaire : croisement après la clôture (${fmtDur(c.hours)})` : `linéaire : croisement hors graphique (${fmtDur(c.hours)}) →` }, svg);
   }
   // crosshair + tooltip
   const cross = el("svg:line", { y1: m.t, y2: m.t + ih, stroke: "var(--muted)", "stroke-dasharray": "3 3", visibility: "hidden" }, svg);
   const tip = tipFor(box), hit = el("svg:rect", { x: m.l, y: m.t, width: iw, height: ih, fill: "transparent" }, svg);
   hit.addEventListener("pointermove", (ev) => {
     const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * (W / r.width);
-    let t = T[i0] + (px - m.l) / iw * (tEnd - T[i0]), va, vb, projd = t > tLast;
-    if (!projd) { let best = i0, bd = Infinity; for (let i = i0; i < N; i++) { const dd = Math.abs(T[i] - t); if (dd < bd) { bd = dd; best = i; } } t = T[best]; va = A.v[best]; vb = B.v[best]; }
-    else { va = proj(A, c.ra, t); vb = proj(B, c.rb, t); }
+    let t = T[i0] + (px - m.l) / iw * (tEnd - T[i0]);
+    const projd = t > tLast;
+    tip.replaceChildren();
+    if (!projd) {
+      let best = i0, bd = Infinity; for (let i = i0; i < N; i++) { const dd = Math.abs(T[i] - t); if (dd < bd) { bd = dd; best = i; } }
+      t = T[best];
+      el("div", { cls: "h", text: `${fDay.format(t)} · ${fTime.format(t)}` }, tip);
+      tipRow(tip, "var(--s1)", nf.format(A.v[best]), A.name);
+      tipRow(tip, "var(--s2)", nf.format(B.v[best]), B.name);
+      tipRow(tip, null, signed(A.v[best] - B.v[best]), "écart A − B");
+    } else {
+      el("div", { cls: "h", text: `${fDay.format(t)} · ${fTime.format(t)} · projection` }, tip);
+      if (G) { const ma = interpG(FC.places[A.id].c, t), mb = interpG(FC.places[B.id].c, t);
+        tipRow(tip, "var(--s1)", nf.format(Math.round(ma)), `${A.name} (modèle)`);
+        tipRow(tip, "var(--s2)", nf.format(Math.round(mb)), `${B.name} (modèle)`);
+        tipRow(tip, null, signed(Math.round(ma - mb)), "écart A − B (modèle)"); }
+      const la = proj(A, c.ra, t), lb = proj(B, c.rb, t);
+      tipRow(tip, null, signed(Math.round(la - lb)), "écart A − B (linéaire)");
+    }
     cross.setAttribute("x1", x(t)); cross.setAttribute("x2", x(t)); cross.setAttribute("visibility", "visible");
-    tip.replaceChildren(); el("div", { cls: "h", text: `${fDay.format(t)} · ${fTime.format(t)}${projd ? " · projection" : ""}` }, tip);
-    tipRow(tip, "var(--s1)", nf.format(Math.round(va)), A.name);
-    tipRow(tip, "var(--s2)", nf.format(Math.round(vb)), B.name);
-    tipRow(tip, null, signed(Math.round(va - vb)), `écart (${A.name.slice(0, 18)}… − ${B.name.slice(0, 18)}…)`);
     tip.hidden = false; placeTip(tip, box, x(t) * (r.width / W), ev.clientY - r.top);
   });
   hit.addEventListener("pointerleave", () => { tip.hidden = true; cross.setAttribute("visibility", "hidden"); });
@@ -950,38 +1218,626 @@ function renderDuelTable(A) {
   const tbl = $("duel-tbl"), thead = tbl.tHead, tbody = tbl.tBodies[0];
   thead.replaceChildren(); tbody.replaceChildren();
   $("duel-vs").textContent = A.name;
+  const hasM = fcOk();
   const hr = el("tr", {}, thead);
-  [["Lieu", ""], ["Voix", "n"], ["Écart", "n"], ["Rythme", "n"], ["Qui passe devant", ""], ["Quand", "n"]].forEach(([l, cl]) => el("th", { cls: cl, text: l }, hr));
-  const rows = P.filter((q) => q.id !== A.id).map((q) => ({ q, c: crossing(A, q, duel.basis) }));
-  rows.sort((r1, r2) => (r1.c.hours - r2.c.hours) || (Math.abs(r1.c.gap) - Math.abs(r2.c.gap)));
-  const finite = rows.filter((r) => isFinite(r.c.hours)), inf = rows.filter((r) => !isFinite(r.c.hours));
-  const closeInf = inf.slice().sort((r1, r2) => r1.c.gap - r2.c.gap).slice(0, 5);
-  const shown = [...finite, ...closeInf];
-  for (const { q, c } of shown) {
+  [["Lieu", ""], ["Voix", "n"], ["Écart", "n"], ["Qui passe devant", ""], ...(hasM ? [["Quand (modèle)", "n"]] : []), ["Quand (linéaire)", "n"],
+   ...(hasM ? [[`A devant ${FC.isEnd ? "à la clôture" : "à la fin"}`, "n"]] : [])].forEach(([l, cl]) => el("th", { cls: cl, text: l }, hr));
+  const rows = P.filter((q) => q.id !== A.id).map((q) => {
+    const c = crossing(A, q, duel.basis), mc = modelCross(A, q);
+    const hm = mc && !mc.tie ? mc.hours : Infinity, hl = !c.tie && inTime(c.hours) ? c.hours : Infinity;
+    return { q, c, mc, h: Math.min(hm, hl), gap: Math.abs(q.v[N - 1] - A.v[N - 1]) };
+  });
+  rows.sort((r1, r2) => (r1.h - r2.h) || (r1.gap - r2.gap));
+  const finite = rows.filter((r) => isFinite(r.h)), inf = rows.filter((r) => !isFinite(r.h));
+  const closeInf = inf.slice().sort((r1, r2) => r1.gap - r2.gap).slice(0, 5);
+  const when = (td, hours, t) => {
+    if (inTime(hours)) { td.textContent = fmtDur(hours); el("div", { cls: "loc", text: fmtWhen(t) }, td); }
+    else if (isFinite(hours) && T[N - 1] + hours * H > closeT()) el("span", { cls: "zero", text: "après la clôture" }, td);
+    else el("span", { cls: "inf-s", text: "∞", title: "Jamais" }, td);
+  };
+  for (const { q, c, mc, h } of [...finite, ...closeInf]) {
     const r = el("tr", { tabindex: 0, title: "Comparer en détail" }, tbody);
     const td = el("td", {}, r); el("div", { cls: "nm", text: q.name }, td);
     el("td", { cls: "n", text: nf.format(q.v[N - 1]) }, r);
     el("td", { cls: "n", text: signed(q.v[N - 1] - A.v[N - 1]) }, r);
-    el("td", { cls: "n", text: nf1.format(c.rb) + " /h" }, r);
     const who = el("td", {}, r);
     if (c.tie) who.textContent = "Égalité";
-    else if (!isFinite(c.hours)) el("span", { cls: "zero", text: "Personne" }, who);
+    else if (!isFinite(h)) el("span", { cls: "zero", text: "Personne" }, who);
     else if (c.chase === A) el("span", { cls: "pill up", text: "▲ Le lieu A passe devant" }, who);
     else el("span", { cls: "pill down", text: "▼ Ce lieu passe devant A" }, who);
-    const tq = el("td", { cls: "n" }, r);
-    if (isFinite(c.hours)) { tq.textContent = fmtDur(c.hours); if (c.hours <= MAX_PROJ_H) el("div", { cls: "loc", text: fmtWhen(T[N - 1] + c.hours * H) }, tq); }
-    else el("span", { cls: "inf-s", text: "∞", title: "Jamais au rythme actuel" }, tq);
+    if (hasM) when(el("td", { cls: "n" }, r), mc.tie ? Infinity : mc.hours, mc.t);
+    when(el("td", { cls: "n" }, r), c.tie ? Infinity : c.hours, T[N - 1] + c.hours * H);
+    if (hasM) el("td", { cls: "n", text: mc.pA === null ? "—" : `${Math.round(mc.pA * 100)} %` }, r);
     const go = () => { duel.b = q.id; saveDuel(); render(); $("duel").scrollIntoView({ block: "start" }); };
     r.addEventListener("click", go);
     r.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
   }
   const rest = inf.length - closeInf.length;
-  $("duel-rest").textContent = rest > 0 ? `∞ pour les ${rest} autres lieux : aucun dépassement prévu dans un sens ou dans l'autre au rythme actuel.` : "";
+  $("duel-rest").textContent = rest > 0 ? `Pour les ${rest} autres lieux : aucun dépassement prévu ${closeTxt()}, ni par le modèle ni par la droite.` : "";
 }
 $("duel-a").addEventListener("change", (e) => { duel.a = e.target.value; if (duel.a === duel.b) duel.b = P.find((p) => p.id !== duel.a).id; saveDuel(); render(); });
 $("duel-b").addEventListener("change", (e) => { duel.b = e.target.value; if (duel.a === duel.b) duel.a = P.find((p) => p.id !== duel.b).id; saveDuel(); render(); });
 $("duel-swap").addEventListener("click", () => { [duel.a, duel.b] = [duel.b, duel.a]; saveDuel(); render(); });
 $("seg-basis").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; duel.basis = b.dataset.v; saveDuel(); render(); });
+
+/* ---------- prévision (modèle fond + boost amorti × cycle jour/nuit, calculé par prevision.py) ---------- */
+let fcSel = store.get("sos-fc") || "total";
+{ const m = store.get("sos-fcm"); if (m && FC_MODELS[m]) { fcModel = m; FC = pickFC(); } }
+if (fcSel !== "total" && !(FC.places && FC.places[fcSel])) fcSel = "total";
+const LN2 = Math.LN2;
+function fcSeries(id) {
+  if (id === "total") return { name: "Total des voix (tous lieux)", v: total, f: FC.total };
+  const p = byIdP.get(id); return { name: p.name, v: p.v, f: FC.places[id] };
+}
+function halfLife(f) {
+  const hl = f.tau * LN2;
+  if (f.tau >= 380) return { v: "—", d: "Pas d'essoufflement mesurable : le rythme reste celui de fond." };
+  if (f.tau <= 0.6 || f.A * f.tau < 0.5) return { v: "—", d: "Pas de boost détecté : rythme stable." };
+  return { v: fmtDur(hl), d: "Le boost d'appel au vote est divisé par deux en " + fmtDur(hl) + "." };
+}
+function renderForecast() {
+  const sum = $("fc-sum"), box = $("fc-chart"), bt = $("fc-bt"), tbl = $("fc-tbl");
+  if (!FC.ok) {
+    $("fc-sub").textContent = FC.why || "Prévision indisponible.";
+    for (const n of [sum, box, bt, tbl.tHead, tbl.tBodies[0]]) n.replaceChildren();
+    $("fc-sel").closest(".pick").hidden = true;
+    return;
+  }
+  const G = FC.grid, tEnd = FC.end, tLast = T[N - 1];
+  const endTxt = FC.isEnd ? `Jusqu'à la clôture du vote, ${fDay.format(tEnd)} à ${fTime.format(tEnd)}` : `Jusqu'au ${fmtWhen(tEnd)}`;
+  const hm = (x) => `${Math.floor(x)} h${Math.round(x % 1 * 60) ? String(Math.round(x % 1 * 60)).padStart(2, "0") : ""}`;
+  $("fc-sub").textContent = `${endTxt} · ` + (FC.diurnal ? `cycle jour/nuit mesuré : ±${Math.round(FC.diurnal.a * 100)} %, pointe vers ${hm(FC.diurnal.peak)} (Paris)`
+    : `profil horaire mesuré : ${FC.peaks && FC.peaks.length ? "pointes vers " + FC.peaks.map(hm).join(", ") : "pas de pointe nette"} (Paris)`);
+  const seg = $("seg-fcm"); seg.replaceChildren();
+  for (const [key, m] of Object.entries(FC_MODELS)) {
+    const b = el("button", { "data-v": key, "aria-pressed": String(key === fcModel), text: m.name + (key === FCS.best && Object.keys(FC_MODELS).length > 1 ? " ★" : "") }, seg);
+    if (key === FCS.best) b.title = "Recommandé : meilleur au test rétrospectif";
+  }
+  seg.closest("div").hidden = Object.keys(FC_MODELS).length < 2;
+  renderCycle();
+
+  // sélecteur
+  const sel = $("fc-sel"); sel.replaceChildren();
+  el("option", { value: "total", text: "Total des voix (tous lieux)" }, sel);
+  P.slice().sort((a, b) => b.v[N - 1] - a.v[N - 1]).forEach((p, k) => el("option", { value: p.id, text: `${k + 1}. ${p.name}` }, sel));
+  sel.value = fcSel;
+
+  const S = fcSeries(fcSel), f = S.f, last = S.v[N - 1], k = G.length - 1;
+
+  // chiffres clés
+  sum.replaceChildren();
+  const tile = (label, v, d) => { const t = el("div", {}, sum); el("div", { cls: "eyebrow", text: label }, t); el("div", { cls: "v", text: v }, t); el("div", { cls: "d", text: d }, t); };
+  tile(`Prévu ${fDay.format(tEnd)} ${fTime.format(tEnd)}`, nf.format(Math.round(f.q50[k])),
+       `entre ${nf.format(Math.round(f.q10[k]))} et ${nf.format(Math.round(f.q90[k]))} (8 chances sur 10) · ${signed(Math.round(f.q50[k] - last))} voix`);
+  tile("Projection linéaire", nf.format(Math.round(f.lin[k])), `au rythme moyen du suivi (${nf1.format(f.linRate)} voix/h) · écart au modèle : ${signed(Math.round(f.lin[k] - f.q50[k]))}`);
+  tile("Rythme actuel (modèle)", nf1.format(f.baseNow) + " voix/h", `en moyenne sur 24 h, dont ${nf1.format(f.r0)} de fond · ${nf1.format(f.rateNow)} voix/h à cette heure-ci`);
+  const hl = halfLife(f); tile("Demi-vie du boost", hl.v, hl.d);
+
+  // graphique
+  box.replaceChildren();
+  const W = box.clientWidth || 900, Hh = 320, m = { l: 62, r: 16, t: 14, b: 28 }, iw = W - m.l - m.r, ih = Hh - m.t - m.b;
+  const t0 = T[0], all = [...S.v, ...f.q90, ...f.q10, ...f.lin, ...f.fit];
+  const yt = niceTicks(Math.min(...all), Math.max(...all), 5), y0 = yt[0], y1 = yt[yt.length - 1];
+  const x = (t) => m.l + (t - t0) / (tEnd - t0) * iw, y = (v) => m.t + ih - (v - y0) / (y1 - y0 || 1) * ih;
+  const svg = el("svg:svg", { viewBox: `0 0 ${W} ${Hh}`, height: Hh, role: "img", "aria-label": `Voix de ${S.name}, ajustement et prévision` }, box);
+  drawGaps(svg, 0, x, m.t, ih);
+  el("svg:rect", { x: x(tLast), y: m.t, width: Math.max(0, x(tEnd) - x(tLast)), height: ih, fill: "var(--accent-wash)", opacity: .5 }, svg);
+  for (const v of yt) { const g = el("svg:g", { cls: "tick" }, svg);
+    el("svg:line", { cls: "gridline", x1: m.l, x2: m.l + iw, y1: y(v), y2: y(v) }, g);
+    el("svg:text", { x: m.l - 8, y: y(v) + 3.5, "text-anchor": "end", text: nf.format(v) }, g); }
+  const span = tEnd - t0, maxT = Math.max(3, Math.floor(iw / 95));
+  const step = [60, 120, 180, 360, 720, 1440, 2880, 10080].map((mm) => mm * 60e3).find((s) => span / s <= maxT) || 20160 * 60e3;
+  const off = parisOffset(tLast);
+  for (let t = Math.ceil((t0 + off) / step) * step - off; t <= tEnd; t += step) {
+    const g = el("svg:g", { cls: "tick" }, svg);
+    el("svg:text", { x: x(t), y: Hh - 8, "text-anchor": "middle", text: step >= 1440 * 60e3 ? fDay.format(t) : `${fWd.format(t)} ${fTime.format(t)}` }, g);
+  }
+  el("svg:line", { x1: x(tLast), x2: x(tLast), y1: m.t, y2: m.t + ih, stroke: "var(--muted)", "stroke-width": 1 }, svg);
+  el("svg:text", { x: x(tLast) + 6, y: m.t + 11, text: "prévision →", style: "font-size:10.5px;fill:var(--muted)" }, svg);
+  const line = (ts, vs) => ts.map((t, i) => `${i ? "L" : "M"}${x(t).toFixed(1)},${y(vs[i]).toFixed(1)}`).join("");
+  const band = line(G, f.q90) + G.slice().reverse().map((t, i) => `L${x(t).toFixed(1)},${y(f.q10[k - i]).toFixed(1)}`).join("") + "Z";
+  el("svg:path", { d: band, fill: "var(--s2)", opacity: .18, stroke: "none" }, svg);
+  el("svg:path", { d: line(G, f.lin), fill: "none", stroke: "var(--muted)", "stroke-width": 1.5, "stroke-dasharray": "2 4", "stroke-linecap": "round" }, svg);
+  const d = pathFor(S.v, 0, x, y);
+  el("svg:path", { d: d.solid, fill: "none", stroke: "var(--accent)", "stroke-width": 2.5, "stroke-linejoin": "round" }, svg);
+  if (d.dashed) el("svg:path", { d: d.dashed, fill: "none", stroke: "var(--accent)", "stroke-width": 1.5, "stroke-dasharray": "3 4", opacity: .8 }, svg);
+  el("svg:path", { d: line(T, f.fit), fill: "none", stroke: "var(--s2)", "stroke-width": 1.5, opacity: .9 }, svg);
+  el("svg:path", { d: line(G, f.q50), fill: "none", stroke: "var(--s2)", "stroke-width": 2, "stroke-dasharray": "6 5", "stroke-linecap": "round" }, svg);
+  el("svg:circle", { cx: x(tLast), cy: y(last), r: 4, fill: "var(--accent)", stroke: "var(--surface)", "stroke-width": 2 }, svg);
+  const cross = el("svg:line", { y1: m.t, y2: m.t + ih, stroke: "var(--muted)", "stroke-dasharray": "3 3", visibility: "hidden" }, svg);
+  const tip = tipFor(box), hit = el("svg:rect", { x: m.l, y: m.t, width: iw, height: ih, fill: "transparent" }, svg);
+  const nearest = (arr, t) => { let b = 0, bd = Infinity; arr.forEach((u, i) => { const dd = Math.abs(u - t); if (dd < bd) { bd = dd; b = i; } }); return b; };
+  hit.addEventListener("pointermove", (ev) => {
+    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * (W / r.width);
+    let t = t0 + (px - m.l) / iw * (tEnd - t0);
+    tip.replaceChildren();
+    if (t <= tLast) {
+      const i = nearest(T, t); t = T[i];
+      el("div", { cls: "h", text: `${fDay.format(t)} · ${fTime.format(t)}` }, tip);
+      tipRow(tip, "var(--accent)", nf.format(S.v[i]), "voix mesurées");
+      tipRow(tip, "var(--s2)", nf.format(Math.round(f.fit[i])), "modèle ajusté");
+    } else {
+      const i = nearest(G, t); t = G[i];
+      el("div", { cls: "h", text: `${fDay.format(t)} · ${fTime.format(t)} · prévision` }, tip);
+      tipRow(tip, "var(--s2)", nf.format(Math.round(f.q50[i])), "modèle (médiane)");
+      tipRow(tip, null, `${nf.format(Math.round(f.q10[i]))} – ${nf.format(Math.round(f.q90[i]))}`, "fourchette 10–90 %");
+      tipRow(tip, "var(--muted)", nf.format(Math.round(f.lin[i])), "projection linéaire");
+    }
+    cross.setAttribute("x1", x(t)); cross.setAttribute("x2", x(t)); cross.setAttribute("visibility", "visible");
+    tip.hidden = false; placeTip(tip, box, x(t) * (r.width / W), ev.clientY - r.top);
+  });
+  hit.addEventListener("pointerleave", () => { tip.hidden = true; cross.setAttribute("visibility", "hidden"); });
+
+  // test rétrospectif
+  if (FC.bt) {
+    const b = FC.bt, ml = b.mae.lineaire, m3 = b.mae.lineaire_3h;
+    const mods = Object.entries(FC_MODELS).filter(([, m]) => m.bt).map(([key, m]) => [m.name.toLowerCase(), m.bt.mae.modele, key]);
+    const bestM = Math.min(...mods.map((m) => m[1])), mm = b.mae.modele;
+    const verdict = Math.min(bestM, ml, m3) === bestM
+      ? `Le modèle ${mods.find((m) => m[1] === bestM)[0]} a fait le mieux.`
+      : "La droite a fait mieux que les modèles : il manque encore des données (au moins 2 à 3 jours) pour bien mesurer le cycle horaire et l'essoufflement.";
+    bt.textContent = `Test rétrospectif : calcul refait sans les ${nf1.format(b.hours)} dernières heures (${nf.format(Math.round(b.gain))} voix gagnées ensuite). Erreur moyenne par lieu : `
+      + mods.map(([n, v]) => `modèle ${n} ${nf1.format(v)} voix`).join(", ") + `, linéaire sur tout le suivi ${nf1.format(ml)}, linéaire sur 3 h ${nf1.format(m3)}. ${verdict}`
+      + (FC.lam !== undefined ? ` Réglage retenu : lissage λ = ${nf.format(FC.lam)}, ${FC.kap == null ? "profil commun à tous les lieux" : "écart propre aux lieux permis (κ = " + nf.format(FC.kap) + ")"}.` : "");
+    void mm;
+  } else bt.textContent = "Test rétrospectif : pas encore assez de relevés.";
+
+  // classement prévu
+  const thead = tbl.tHead, tbody = tbl.tBodies[0]; thead.replaceChildren(); tbody.replaceChildren();
+  const hr = el("tr", {}, thead);
+  [["Rang prévu", "n"], ["Lieu", ""], ["Voix", "n"], ["Prévu", "n"], ["Fourchette 10–90 %", "n"], ["Linéaire", "n"], ["Rythme moyen", "n"], ["Demi-vie", "n"]]
+    .forEach(([l, cl]) => el("th", { cls: cl, text: l }, hr));
+  const nowRank = new Map(P.slice().sort((a, b) => b.v[N - 1] - a.v[N - 1]).map((p, i) => [p.id, i + 1]));
+  P.slice().sort((a, b) => FC.places[b.id].q50[k] - FC.places[a.id].q50[k]).forEach((p, i) => {
+    const q = FC.places[p.id], r = el("tr", { tabindex: 0, cls: p.id === fcSel ? "cur" : "" }, tbody);
+    const rk = el("td", { cls: "n" }, r); rk.append(String(i + 1));
+    const dr = nowRank.get(p.id) - (i + 1);
+    if (dr) el("span", { cls: "pill " + (dr > 0 ? "up" : "down"), text: (dr > 0 ? "▲ " : "▼ ") + Math.abs(dr) }, rk);
+    const td = el("td", {}, r); el("div", { cls: "nm", text: p.name }, td);
+    el("td", { cls: "n", text: nf.format(p.v[N - 1]) }, r);
+    el("td", { cls: "n", text: nf.format(Math.round(q.q50[k])) }, r);
+    el("td", { cls: "n", text: `${nf.format(Math.round(q.q10[k]))} – ${nf.format(Math.round(q.q90[k]))}` }, r);
+    el("td", { cls: "n", text: nf.format(Math.round(q.lin[k])) }, r);
+    el("td", { cls: "n", text: nf1.format(q.baseNow) + " /h" }, r);
+    el("td", { cls: "n", text: halfLife(q).v }, r);
+    const go = () => { fcSel = p.id; store.set("sos-fc", fcSel); renderForecast(); $("fc").scrollIntoView({ block: "start" }); };
+    r.addEventListener("click", go);
+    r.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+  });
+}
+$("seg-fcm").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b || !FC_MODELS[b.dataset.v]) return;
+  fcModel = b.dataset.v; store.set("sos-fcm", fcModel); FC = pickFC(); render();
+});
+function renderCycle() {
+  const box = $("fc-cyc"); box.replaceChildren();
+  const W = box.clientWidth || 700, Hh = 190, m = { l: 40, r: 10, t: 10, b: 26 }, iw = W - m.l - m.r, ih = Hh - m.t - m.b;
+  const hh = Array.from({ length: 49 }, (_, i) => i / 2);
+  const curves = Object.entries(FC_MODELS).filter(([, md]) => md.cycle).map(([key, md]) => ({ key, md }));
+  const emp = (FC_MODELS.jnb && FC_MODELS.jnb.emp) || [];
+  if (!curves.length) return;   // ancien format de prévision : pas de profil à tracer
+  const hi = Math.max(2, ...curves.flatMap((c) => c.md.cycle), ...emp.map((e) => Math.min(e[1], 4)));
+  const yt = niceTicks(0, hi, 4), y1 = yt[yt.length - 1];
+  const x = (h) => m.l + h / 24 * iw, y = (v) => m.t + ih - Math.min(v, y1) / y1 * ih;
+  const svg = el("svg:svg", { viewBox: `0 0 ${W} ${Hh}`, height: Hh, role: "img", "aria-label": "Cycle horaire des votes" }, box);
+  el("svg:rect", { x: x(0), y: m.t, width: x(6) - x(0), height: ih, fill: "var(--accent-wash)" }, svg);
+  for (const v of yt) { const g = el("svg:g", { cls: "tick" }, svg);
+    el("svg:line", { cls: v === 1 ? "baseline" : "gridline", x1: m.l, x2: m.l + iw, y1: y(v), y2: y(v) }, g);
+    el("svg:text", { x: m.l - 6, y: y(v) + 3.5, "text-anchor": "end", text: "×" + nf.format(v) }, g); }
+  for (let h = 0; h <= 24; h += 3) { const g = el("svg:g", { cls: "tick" }, svg); el("svg:text", { x: x(h), y: Hh - 8, "text-anchor": "middle", text: h + " h" }, g); }
+  for (const c of curves) {
+    const d = hh.map((h, i) => `${i ? "L" : "M"}${x(h).toFixed(1)},${y(c.md.cycle[i]).toFixed(1)}`).join("");
+    const on = c.key === fcModel;
+    el("svg:path", { d, fill: "none", stroke: c.key === "jnb" ? "var(--s3)" : "var(--s7)", "stroke-width": on ? 2.5 : 1.5,
+      "stroke-dasharray": c.key === "jnb" ? "" : "6 4", opacity: on ? 1 : .6, "stroke-linejoin": "round" }, svg);
+  }
+  const wmax = Math.max(1, ...emp.map((e) => e[2])), tip = tipFor(box);
+  for (const [h, r, w] of emp) {
+    const c = el("svg:circle", { cx: x(h + 0.5), cy: y(r), r: 2.5 + 4 * Math.sqrt(w / wmax), fill: "var(--ink2)", "fill-opacity": .55, stroke: "var(--surface)" }, svg);
+    c.addEventListener("pointermove", (ev) => { tip.replaceChildren(); el("div", { cls: "h", text: `${h} h – ${h + 1} h (observé)` }, tip);
+      tipRow(tip, "var(--ink2)", "×" + nf2.format(r), "rythme / moyenne"); tipRow(tip, null, nf.format(Math.round(w)), "voix attendues sans cycle (poids)");
+      const br = box.getBoundingClientRect(); tip.hidden = false; placeTip(tip, box, ev.clientX - br.left, ev.clientY - br.top); });
+    c.addEventListener("pointerleave", () => (tip.hidden = true));
+  }
+}
+$("fc-sel").addEventListener("change", (e) => { fcSel = e.target.value; store.set("sos-fc", fcSel); renderForecast(); });
+
+/* ---------- anomalies ---------- */
+// Idée : chaque lieu reçoit d'habitude une certaine part des voix gagnées par l'ensemble. Sur chaque tranche, on attend
+// donc part / (1 − part) × voix gagnées par les autres. Un écart très improbable (Poisson) et nettement supérieur à 1 est
+// une anomalie propre au lieu : un vote de masse qui touche tout le monde ne ressort pas.
+const SENS = { strict: { lp: 6, ratio: 4, min: 10 }, normal: { lp: 4, ratio: 3, min: 6 }, large: { lp: 3, ratio: 2, min: 4 } };
+const astate = { bin: "30", sens: "normal", data: "all", sel: null };
+// Relevés continus (toutes les 5 min) depuis le 24 nov. 13:35 (Paris) ; avant, le suivi est troué.
+// « Relevés continus » ignore tout ce qui précède : parts habituelles, dispersion et nuits ne reposent que sur ces données.
+const CONT_FROM = Date.parse("2026-11-24T13:35:00+01:00") - 60e3;
+try { const s = JSON.parse(store.get("sos-anom") || "null"); if (s) { if (["15", "30", "60"].includes(s.bin)) astate.bin = s.bin; if (SENS[s.sens]) astate.sens = s.sens; if (["all", "cont"].includes(s.data)) astate.data = s.data; astate.sel = s.sel || null; } } catch {}
+const saveA = () => store.set("sos-anom", JSON.stringify(astate));
+const NIGHT = [0, 6];   // heures de Paris
+const SKIP_MS = H;      // une tranche avec plus d'1 h sans relevé n'est pas analysée : on ne sait pas quand les voix sont arrivées
+
+function lgamma(x) {
+  const c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059,
+    12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+  if (x < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * x)) - lgamma(1 - x);
+  x -= 1; let a = c[0]; const t = x + 7.5; for (let i = 1; i < 9; i++) a += c[i] / (x + i);
+  return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+}
+// −log10 P(X ≥ k) : la « force » de l'écart (4 = une chance sur 10 000).
+// X a pour moyenne lam et pour variance v ≥ lam : binomiale négative (voix qui arrivent groupées, part
+// habituelle incertaine) ; Poisson si v ≈ lam.
+function surprise(k, lam, v = lam) {
+  k = Math.round(k); lam = Math.max(lam, 0.05);
+  if (k <= lam) return 0;
+  let lp0, q, r = Infinity;
+  if (v > lam * 1.001) {
+    r = lam * lam / (v - lam); q = lam / (r + lam);
+    lp0 = lgamma(k + r) - lgamma(r) - lgamma(k + 1) + r * Math.log(1 - q) + k * Math.log(q);
+  } else lp0 = k * Math.log(lam) - lam - lgamma(k + 1);
+  let acc = 1, t = 1;
+  for (let i = k; i < k + 20000; i++) { t *= isFinite(r) ? (i + r) / (i + 1) * q : lam / (i + 1); acc += t; if (t < 1e-12 * acc) break; }
+  return Math.max(0, -(lp0 + Math.log(acc)) / Math.LN10);
+}
+// Part de [a, e] située la nuit (heure de Paris), échantillonnée toutes les 5 min.
+function nightFrac(a, e) {
+  const off = parisOffset(a), n = Math.max(1, Math.round((e - a) / 300e3)); let k = 0;
+  for (let j = 0; j < n; j++) { const h = new Date(a + (j + 0.5) * (e - a) / n + off).getUTCHours(); if (h >= NIGHT[0] && h < NIGHT[1]) k++; }
+  return k / n;
+}
+function anomBins(stepMin) {
+  const step = stepMin * 60e3, bins = []; let cur = null;
+  const close = () => { if (cur) bins.push(cur); cur = null; };
+  for (let i = 1; i < N; i++) {
+    if (T[i] - T[i - 1] > GAP_MS) { close(); bins.push({ a: T[i - 1], e: T[i], i0: i - 1, i1: i, gap: true, skip: T[i] - T[i - 1] > SKIP_MS }); continue; }
+    const b = Math.floor(T[i - 1] / step) * step;
+    if (!cur || cur.b !== b) { close(); cur = { b, a: T[i - 1], e: T[i], i0: i - 1, i1: i, gap: false }; }
+    else { cur.e = T[i]; cur.i1 = i; }
+  }
+  close();
+  if (astate.data === "cont") bins.splice(0, bins.findIndex((b) => b.a >= CONT_FROM) < 0 ? bins.length : bins.findIndex((b) => b.a >= CONT_FROM));
+  for (const b of bins) {
+    b.g = P.map((p) => p.v[b.i1] - p.v[b.i0]);
+    b.G = b.g.reduce((s, x) => s + x, 0);
+    b.night = nightFrac(b.a, b.e);
+  }
+  return bins;
+}
+// Voix attendues pour un lieu qui a la part s, quand les autres gagnent `others` voix.
+const expect = (s, others) => s / (1 - s) * Math.max(0, others);
+
+// Variance de l'attendu : φ·lam (voix groupées, φ = 1 pour Poisson) + lam² / (n + 1), l'incertitude sur la part
+// habituelle quand elle repose sur n voix du lieu.
+const varOf = (lam, phi, n) => phi * lam + lam * lam / (n + 1);
+const PHI_K = 10;      // poids (en tranches) de la dispersion globale dans la dispersion d'un lieu
+const PHI_CAP = 25;    // contribution max d'une tranche à φ (un écart de 5 σ) : une anomalie ne masque pas les autres
+
+function detect() {
+  const th = SENS[astate.sens], bins = anomBins(+astate.bin), nP = P.length;
+  const gAll = P.map((_, j) => bins.reduce((s, b) => s + b.g[j], 0)), GAll = gAll.reduce((s, x) => s + x, 0);
+  // Cellules (lieu × tranche) : attendu d'après la part habituelle, hors tranche testée.
+  const cells = bins.map((b) => b.g.map((g, j) => {
+    const n = gAll[j] - g, s = Math.min(0.95, (n + 1) / (GAll - b.G + nP));
+    return { g, n, s, lam: expect(s, b.G - g) };
+  }));
+  // Dispersion : écart quadratique moyen rapporté à Poisson, sur les tranches mesurées (hors trous de relevé).
+  let sumG = 0, nG = 0; const sumJ = P.map(() => 0), nJ = P.map(() => 0);
+  bins.forEach((b, k) => { if (b.skip) return; cells[k].forEach((c, j) => {
+    if (c.lam < 0.5) return;
+    const x = Math.min(PHI_CAP, ((c.g - c.lam) ** 2 - c.lam * c.lam / (c.n + 1)) / c.lam);
+    sumG += x; nG++; sumJ[j] += x; nJ[j]++;
+  }); });
+  const phiG = Math.max(1, nG ? sumG / nG : 1);
+  const phi = P.map((_, j) => Math.min(10, Math.max(1, (sumJ[j] + PHI_K * phiG) / (nJ[j] + PHI_K))));
+  for (const row of cells) row.forEach((c, j) => {
+    c.v = varOf(c.lam, phi[j], c.n); c.lp = surprise(c.g, c.lam, c.v);
+    c.flag = c.g >= th.min && c.g >= th.ratio * c.lam && c.lp >= th.lp;
+  });
+  bins.forEach((b, k) => { if (b.skip) cells[k].forEach((c) => { c.flag = false; c.skip = true; }); });
+  // Étalonnage : sous le modèle, au plus N × 10^−x tranches atteignent une force x par hasard.
+  const meas = []; bins.forEach((b, k) => { if (!b.skip) cells[k].forEach((c) => meas.push(c.lp)); });
+  const calib = [2, 3, 4].map((x) => ({ x, obs: meas.filter((lp) => lp >= x).length, exp: meas.length * 10 ** -x }));
+
+  const evs = [];
+  for (let j = 0; j < nP; j++) {
+    // Tranches consécutives signalées → un seul événement (voix, attendus et variances cumulés).
+    let run = null;
+    const push = () => { if (!run) return; evs.push(mkEvent(j, run[0], run[run.length - 1], ["pic"])); run = null; };
+    for (let k = 0; k < bins.length; k++) { if (cells[k][j].flag) (run ||= []).push(k); else push(); }
+    push();
+  }
+  function mkEvent(j, k0, k1, kinds, over, habit) {
+    let g = 0, G = 0, lam = 0, v = 0, nf = 0, dur = 0, gap = false; const up = new Set();
+    for (let k = k0; k <= k1; k++) {
+      const b = bins[k]; g += b.g[j]; G += b.G; lam += cells[k][j].lam; v += cells[k][j].v; gap ||= b.gap;
+      nf += b.night * (b.e - b.a); dur += b.e - b.a;
+      b.g.forEach((x, i) => { if (i !== j && x > 0) up.add(i); });
+    }
+    if (over) ({ lam, v } = over);
+    const ev = { j, p: P[j], k0, k1, a: bins[k0].a, e: bins[k1].e, g, G, lam, v, lp: surprise(g, lam, v), kinds: new Set(kinds),
+      night: dur ? nf / dur : 0, gap, others: up.size, habit: habit ?? cells[k0][j].s, phi: phi[j] };
+    if (G > 0 && g / G >= 0.6) ev.kinds.add("seul");
+    return ev;
+  }
+  // Accélération isolée : dernière heure comparée aux 3 h d'avant, en part de l'activité.
+  const acc = [];
+  for (let j = 0; j < nP; j++) {
+    let run = null;
+    const flush = () => { if (run) acc.push(run); run = null; };
+    for (let k = 0; k < bins.length; k++) {
+      if (bins[k].skip) { flush(); continue; }
+      let k0 = k; while (k0 > 0 && !bins[k0 - 1].skip && bins[k].e - bins[k0 - 1].a <= H + 60e3) k0--;
+      const wa = bins[k0].a; let gw = 0, Gw = 0, gb = 0, Gb = 0;
+      for (let q = k0; q <= k; q++) { gw += bins[q].g[j]; Gw += bins[q].G; }
+      for (let q = k0 - 1; q >= 0 && !bins[q].skip && bins[q].a >= wa - 3 * H - 60e3; q--) { gb += bins[q].g[j]; Gb += bins[q].G; }
+      if (Gb < 20) { flush(); continue; }
+      const s = Math.min(0.95, (gb + 1) / (Gb + nP)), lam = expect(s, Gw - gw), v = varOf(lam, phi[j], gb), lp = surprise(gw, lam, v);
+      if (gw >= th.min && gw >= th.ratio * lam && lp >= th.lp) {
+        if (run && k0 <= run.k1 + 1) { if (lp > run.lp) Object.assign(run, { k0: Math.min(run.k0, k0), k1: k, lp, s, gb }); else run.k1 = k; }
+        else { flush(); run = { j, k0, k1: k, lp, s, gb }; }
+      } else flush();
+    }
+    flush();
+  }
+  for (const r of acc) {
+    const hit = evs.find((e) => e.j === r.j && e.k0 <= r.k1 && r.k0 <= e.k1);
+    if (hit) { hit.kinds.add("accel"); continue; }
+    // Attendu sur toute la durée de l'événement, à la part des 3 h d'avant (même incertitude de part pour toutes les tranches).
+    let lam = 0, pv = 0;
+    for (let k = r.k0; k <= r.k1; k++) { const l = expect(r.s, bins[k].G - bins[k].g[r.j]); lam += l; pv += phi[r.j] * l; }
+    evs.push(mkEvent(r.j, r.k0, r.k1, ["accel"], { lam, v: pv + lam * lam / (r.gb + 1) }, r.s));
+  }
+  for (const e of evs) if (e.night >= 0.5) e.kinds.add("nuit");
+  evs.sort((a, b) => b.lp - a.lp);
+
+  // Nuit, cumulée sur les tranches analysées : voix de nuit d'un lieu comparées à sa part de jour.
+  const ok = bins.filter((b) => !b.skip);
+  const GN = ok.reduce((s, b) => s + b.night * b.G, 0), GD = ok.reduce((s, b) => s + (1 - b.night) * b.G, 0);
+  const nightH = ok.reduce((s, b) => s + b.night * (b.e - b.a), 0) / H;
+  const nightGapH = bins.reduce((s, b) => s + (b.skip ? b.night * (b.e - b.a) : 0), 0) / H;
+  const nights = P.map((p, j) => {
+    const gn = ok.reduce((s, b) => s + b.night * b.g[j], 0), gd = ok.reduce((s, b) => s + (1 - b.night) * b.g[j], 0);
+    const s = Math.min(0.95, (gd + 1) / (GD + nP)), lam = expect(s, GN - gn), lp = surprise(gn, lam, varOf(lam, phi[j], gd));
+    return { j, p, gn, gd, lam, lp, sN: GN ? gn / GN : 0, sD: GD ? gd / GD : 0, flag: Math.round(gn) >= th.min && gn >= th.ratio * lam && lp >= th.lp };
+  });
+  return { bins, cells, evs, nights, GN, GD, nightH, nightGapH, th, phi, phiG, calib, nMeas: meas.length };
+}
+
+const KIND = { pic: ["crit", "Pic isolé"], seul: ["crit", "Seul à progresser"], accel: ["down", "Accélération isolée"], nuit: ["night", "☾ Nuit"] };
+const force = (lp) => lp >= 8 ? ["crit", "Très forte"] : lp >= 5 ? ["down", "Forte"] : ["flat", "Modérée"];
+const ratioTxt = (g, lam) => lam < 0.5 ? (g ? "≫ 10" : "—") : "×" + (g / lam >= 10 ? nf.format(Math.round(g / lam)) : nf1.format(g / lam));
+const spanTxt = (a, e) => `${fDay.format(a)} ${fTime.format(a)} → ${fDay.format(e) === fDay.format(a) ? "" : fDay.format(e) + " "}${fTime.format(e)}`;
+let AN = null;
+
+function anomBadge() {
+  const b = $("an-badge"); if (!AN) AN = detect();
+  b.textContent = AN.evs.length || "0";
+  b.classList.toggle("hot", AN.evs.some((e) => e.lp >= 5));
+}
+function renderAnom() {
+  AN = detect(); anomBadge();
+  $("adata-cont").textContent = `Depuis le ${fDay.format(CONT_FROM + 60e3)} ${fTime.format(CONT_FROM + 60e3)}`;
+  for (const [id, key] of [["seg-abin", "bin"], ["seg-asens", "sens"], ["seg-adata", "data"]]) for (const b of $(id).querySelectorAll("button"))
+    b.setAttribute("aria-pressed", String(b.dataset.v === astate[key]));
+  const { evs, nights, bins } = AN;
+  if (!astate.sel || !P.some((p) => p.id === astate.sel)) astate.sel = (evs[0] || { p: P[0] }).p.id;
+
+  // Indicateurs
+  const k = $("an-kpis"); k.replaceChildren();
+  const places = new Set(evs.map((e) => e.p.id)), strong = evs.filter((e) => e.lp >= 5).length;
+  kpi(k, "Anomalies détectées", nf.format(evs.length), evs.length ? `dont ${strong} forte(s) ou très forte(s)` : "rien d'anormal à cette sensibilité");
+  kpi(k, "Lieux concernés", `${places.size} / ${P.length}`, evs.length ? `le plus marqué : ${evs[0].p.name}` : "—");
+  const nEv = evs.filter((e) => e.kinds.has("nuit")).length, nPl = nights.filter((n) => n.flag).length;
+  kpi(k, "La nuit (0 h – 6 h)", nf.format(nEv + nPl), `${nEv} pic(s) nocturne(s) · ${nPl} lieu(x) anormalement actif(s) la nuit`);
+  kpi(k, "Nuit analysée", nf1.format(AN.nightH) + " h", AN.nightGapH > 0.1 ? `${nf1.format(AN.nightGapH)} h de nuit ignorées (trous de relevé de plus d'1 h)` : "aucune nuit ignorée");
+
+  // Tableau des événements
+  const tbl = $("an-tbl"), thead = tbl.tHead, tbody = tbl.tBodies[0];
+  thead.replaceChildren(); tbody.replaceChildren();
+  $("an-empty").hidden = evs.length > 0; tbl.hidden = !evs.length;
+  $("an-empty").textContent = "Aucune anomalie à cette sensibilité : chaque lieu suit à peu près sa part habituelle de l'activité. Essayer « Large » pour voir les écarts plus faibles.";
+  const hr = el("tr", {}, thead);
+  [["Quand", ""], ["Lieu", ""], ["Type", ""], ["Voix gagnées", "n"], ["Attendues", "n"], ["Écart", "n"], ["Force", ""]].forEach(([l, c]) => el("th", { cls: c, text: l }, hr));
+  for (const e of evs) {
+    const r = el("tr", { tabindex: 0, title: "Voir ce lieu en détail" }, tbody);
+    const tq = el("td", { text: spanTxt(e.a, e.e) }, r); tq.style.whiteSpace = "nowrap";
+    const tp = el("td", { cls: "place" }, r);
+    el("div", { cls: "nm", text: e.p.name }, tp);
+    const share = e.G ? e.g / e.G * 100 : 0;
+    const ref = e.kinds.has("pic") ? "d'habitude" : "dans les 3 h d'avant";
+    el("div", { cls: "why", text: `${nf.format(Math.round(share))} % des voix de la période (${ref} ${nf1.format(e.habit * 100)} %) · `
+      + (e.others ? `${e.others} autre(s) lieu(x) ont aussi gagné des voix` : "aucun autre lieu n'a gagné de voix")
+      + (e.gap ? " · relevés espacés (moins d'1 h)" : "") }, tp);
+    const pl = el("div", { cls: "pills" }, el("td", {}, r));
+    for (const kk of ["seul", "pic", "accel", "nuit"]) if (e.kinds.has(kk) && !(kk === "pic" && e.kinds.has("seul"))) el("span", { cls: "pill " + KIND[kk][0], text: KIND[kk][1] }, pl);
+    el("td", { cls: "n", text: signed(e.g) }, r);
+    el("td", { cls: "n", text: nf1.format(e.lam) }, r);
+    el("td", { cls: "n", text: ratioTxt(e.g, e.lam) }, r);
+    const f = force(e.lp); el("span", { cls: "pill " + f[0], text: f[1], title: `probabilité d'un tel écart par hasard : 1 sur ${e.lp >= 15 ? "plus de 10¹⁵" : nf.format(Math.round(10 ** e.lp))}` }, el("td", {}, r));
+    const go = () => { astate.sel = e.p.id; saveA(); renderAnomDetail(); $("an-det").scrollIntoView({ block: "start", behavior: "smooth" }); };
+    r.addEventListener("click", go);
+    r.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); } });
+  }
+
+  const cal = AN.calib.map((c) => `force ≥ ${c.x} : ${c.obs} observée(s) pour ${c.exp < 1 ? "moins de 1" : "≈ " + nf.format(Math.round(c.exp))} attendue(s) par hasard`).join(" · ");
+  const per = AN.bins.length ? `Période analysée : ${spanTxt(AN.bins[0].a, AN.bins[AN.bins.length - 1].e)}${astate.data === "cont" ? " (relevés continus uniquement)" : ""}. ` : "Aucune donnée sur la période choisie. ";
+  $("an-calib").textContent = per + `Contrôle sur ${nf.format(AN.nMeas)} cases lieu × tranche mesurées : ${cal}. Dispersion globale φ = ${nf1.format(AN.phiG)} (1 = voix indépendantes).`;
+  renderHeat();
+  const sel = $("an-sel"); sel.replaceChildren();
+  P.slice().sort((a, b) => a.name.localeCompare(b.name, "fr")).forEach((p) => el("option", { value: p.id, text: p.name }, sel));
+  renderAnomDetail();
+  renderNight();
+}
+
+function renderHeat() {
+  const { bins, cells, evs } = AN, box = $("an-heat"); box.replaceChildren();
+  const flagged = new Set(); for (const e of evs) for (let k = e.k0; k <= e.k1; k++) flagged.add(e.j + ":" + k);
+  const score = P.map((_, j) => Math.max(0, ...evs.filter((e) => e.j === j).map((e) => e.lp)));
+  const order = P.map((_, j) => j).sort((a, b) => score[b] - score[a] || P[b].v[N - 1] - P[a].v[N - 1]);
+  const avail = box.clientWidth || 900, lw = Math.min(230, Math.max(120, avail * 0.28));
+  const cw = Math.max(9, Math.min(40, (avail - lw - 8) / bins.length)), rh = 18, top = 30;
+  const W = lw + cw * bins.length + 8, Hh = top + rh * P.length + 4;
+  $("an-heat-sub").textContent = `Chaque case : voix gagnées par un lieu sur une tranche de ${astate.bin} min, comparées à sa part habituelle de l'activité des autres. Lieux les plus atypiques en haut. Le défilement horizontal montre tout le suivi.`;
+  const svg = el("svg:svg", { viewBox: `0 0 ${W} ${Hh}`, width: W, height: Hh, role: "img", "aria-label": "Carte des écarts par lieu et par tranche" }, box);
+  const defs = el("svg:defs", {}, svg), pat = el("svg:pattern", { id: "hatch", width: 4, height: 4, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, defs);
+  el("svg:line", { x1: 0, y1: 0, x2: 0, y2: 4, stroke: "var(--muted)", "stroke-width": 1, opacity: .6 }, pat);
+  const every = Math.max(1, Math.ceil(56 / cw));
+  bins.forEach((b, k) => {
+    const x = lw + k * cw;
+    if (b.night >= 0.5) el("svg:rect", { x, y: top - 6, width: cw, height: Hh - top + 6, fill: "var(--accent-wash)" }, svg);
+    if (b.skip) el("svg:rect", { x, y: top, width: cw, height: rh * P.length, fill: "url(#hatch)" }, svg);
+    if (k % every === 0 && !b.gap) {
+      const g = el("svg:g", { cls: "tick" }, svg);
+      el("svg:text", { x: x + 1, y: top - 10, text: fTime.format(b.a) }, g);
+    }
+  });
+  const tip = tipFor(box);
+  order.forEach((j, row) => {
+    const y = top + row * rh, p = P[j];
+    const lab = el("svg:g", { cls: "rowlab", tabindex: 0, role: "button", "aria-label": `Voir ${p.name} en détail` }, svg);
+    const maxC = Math.floor(lw / 6.3), name = p.name.length > maxC ? p.name.slice(0, maxC - 1) + "…" : p.name;
+    el("svg:rect", { x: 0, y, width: lw - 4, height: rh, fill: "transparent" }, lab);
+    el("svg:text", { x: lw - 8, y: y + rh / 2 + 4, "text-anchor": "end", text: name, style: score[j] ? "fill:var(--ink);font-weight:600" : "" }, lab);
+    const go = () => { astate.sel = p.id; saveA(); renderAnomDetail(); $("an-det").scrollIntoView({ block: "start", behavior: "smooth" }); };
+    lab.addEventListener("click", go); lab.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+    if (row) el("svg:line", { x1: lw, x2: W - 8, y1: y, y2: y, stroke: "var(--grid)" }, svg);
+    bins.forEach((b, k) => {
+      const c = cells[k][j], x = lw + k * cw, r = Math.log2((c.g + 0.5) / (c.lam + 0.5));
+      const isF = flagged.has(j + ":" + k);
+      if (!b.skip && c.g >= 2 && r > 0.3) el("svg:rect", { x: x + 1, y: y + 1, width: cw - 2, height: rh - 2, rx: 2, fill: "var(--crit)", "fill-opacity": Math.min(1, 0.15 + r / 3 * 0.85) }, svg);
+      if (isF) el("svg:rect", { x: x + 0.75, y: y + 0.75, width: cw - 1.5, height: rh - 1.5, rx: 2, fill: "none", stroke: "var(--ink)", "stroke-width": 1.5 }, svg);
+      const hit = el("svg:rect", { x, y, width: cw, height: rh, fill: "transparent" }, svg);
+      hit.addEventListener("pointermove", (ev) => {
+        tip.replaceChildren();
+        el("div", { cls: "h", text: `${p.name} · ${spanTxt(b.a, b.e)}${b.gap ? " · trou de relevé" : ""}${b.night >= 0.5 ? " · nuit" : ""}` }, tip);
+        tipRow(tip, b.skip ? "var(--other)" : "var(--crit)", signed(c.g), "voix gagnées");
+        if (b.skip) { el("div", { cls: "h", text: "Plus d'1 h sans relevé : non analysé" }, tip); tip.hidden = false;
+          const br0 = box.getBoundingClientRect(); placeTip(tip, box, ev.clientX - br0.left + box.scrollLeft, ev.clientY - br0.top); return; }
+        tipRow(tip, "var(--ink)", nf1.format(c.lam), "attendues d'après les autres");
+        tipRow(tip, null, `${nf.format(b.G ? Math.round(c.g / b.G * 100) : 0)} %`, `de l'activité (d'habitude ${nf1.format(c.s * 100)} %)`);
+        tipRow(tip, null, nf1.format(c.lp), "force de l'écart (−log₁₀ p)");
+        if (isF) el("div", { cls: "h", text: "Anomalie retenue" }, tip);
+        tip.hidden = false; const br = box.getBoundingClientRect();
+        placeTip(tip, box, ev.clientX - br.left + box.scrollLeft, ev.clientY - br.top);
+      });
+      hit.addEventListener("pointerleave", () => (tip.hidden = true));
+      hit.addEventListener("click", go);
+    });
+  });
+}
+
+// Quantile q de la loi (Poisson ou binomiale négative) de moyenne lam et de variance v.
+function quantile(lam, v, q) {
+  lam = Math.max(lam, 1e-6);
+  const nb = v > lam * 1.001, r = nb ? lam * lam / (v - lam) : Infinity, pr = nb ? lam / (r + lam) : 0;
+  let pmf = nb ? Math.exp(r * Math.log(1 - pr)) : Math.exp(-lam), cdf = pmf, k = 0;
+  while (cdf < q && k < 100000) { pmf *= nb ? (k + r) / (k + 1) * pr : lam / (k + 1); k++; cdf += pmf; }
+  return k;
+}
+// Plus petit nombre de voix qui ferait de la tranche une anomalie, à la sensibilité choisie.
+function threshold(lam, v, th) {
+  let k = Math.max(th.min, Math.ceil(th.ratio * lam - 1e-9));
+  while (surprise(k, lam, v) < th.lp && k < 100000) k++;
+  return k;
+}
+function renderAnomDetail() {
+  const { bins, cells, evs } = AN, box = $("an-det-chart"); box.replaceChildren();
+  const j = P.findIndex((p) => p.id === astate.sel), p = P[j];
+  $("an-sel").value = p.id;
+  const mine = evs.filter((e) => e.j === j);
+  $("an-det-sub").textContent = `${[p.commune, p.dept].filter(Boolean).join(" · ")} · ${mine.length ? mine.length + " anomalie(s)" : "aucune anomalie"} · part habituelle de l'activité : `
+    + nf1.format(cells[0] ? cells[0][j].s * 100 : 0) + ` % · dispersion φ = ${nf1.format(AN.phi[j])}`;
+  const flagged = new Set(); for (const e of mine) for (let k = e.k0; k <= e.k1; k++) flagged.add(k);
+  const W = box.clientWidth || 600, Hh = 240, m = { l: 40, r: 8, t: 12, b: 26 }, iw = W - m.l - m.r, ih = Hh - m.t - m.b;
+  const band = bins.map((b, k) => { const c = cells[k][j]; return b.skip ? null
+    : { lo: quantile(c.lam, c.v, 0.1), hi: quantile(c.lam, c.v, 0.9), thr: threshold(c.lam, c.v, AN.th) }; });
+  const vals = bins.map((b, k) => Math.max(cells[k][j].g, cells[k][j].lam, band[k] ? band[k].thr : 0));
+  const yt = niceTicks(0, Math.max(4, ...vals), 4), y1 = yt[yt.length - 1], y = (v) => m.t + ih - v / y1 * ih;
+  const bw = iw / Math.max(1, bins.length);
+  const svg = el("svg:svg", { viewBox: `0 0 ${W} ${Hh}`, height: Hh, role: "img", "aria-label": `Voix gagnées par ${p.name}, tranche par tranche` }, box);
+  const defs = el("svg:defs", {}, svg), pat = el("svg:pattern", { id: "hatch2", width: 4, height: 4, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, defs);
+  el("svg:line", { x1: 0, y1: 0, x2: 0, y2: 4, stroke: "var(--muted)", "stroke-width": 1, opacity: .6 }, pat);
+  bins.forEach((b, k) => {
+    if (b.night >= 0.5) el("svg:rect", { x: m.l + k * bw, y: m.t, width: bw, height: ih, fill: "var(--accent-wash)" }, svg);
+    if (b.skip) el("svg:rect", { x: m.l + k * bw, y: m.t, width: bw, height: ih, fill: "url(#hatch2)" }, svg);
+  });
+  for (const v of yt) { const g = el("svg:g", { cls: "tick" }, svg);
+    el("svg:line", { cls: v === 0 ? "baseline" : "gridline", x1: m.l, x2: m.l + iw, y1: y(v), y2: y(v) }, g);
+    el("svg:text", { x: m.l - 6, y: y(v) + 3.5, "text-anchor": "end", text: nf.format(v) }, g); }
+  const every = Math.max(1, Math.ceil(60 / bw)), tip = tipFor(box);
+  bins.forEach((b, k) => {
+    const c = cells[k][j], cx = m.l + k * bw + bw / 2, w = Math.max(1, bw * 0.72);
+    const q = band[k];
+    if (q && q.hi > q.lo) el("svg:rect", { x: m.l + k * bw + 1, y: y(q.hi), width: Math.max(1, bw - 2), height: y(q.lo) - y(q.hi), fill: "var(--ink)", opacity: .1 }, svg);
+    if (c.g > 0) el("svg:rect", { x: cx - w / 2, y: y(c.g), width: w, height: m.t + ih - y(c.g), rx: Math.min(3, w / 2), fill: b.skip ? "var(--other)" : flagged.has(k) ? "var(--crit)" : "var(--accent)" }, svg);
+    if (!b.skip) el("svg:line", { x1: cx - w / 2 - 1, x2: cx + w / 2 + 1, y1: y(c.lam), y2: y(c.lam), stroke: "var(--ink)", "stroke-width": 1.5 }, svg);
+    if (q) el("svg:line", { x1: m.l + k * bw + 1, x2: m.l + (k + 1) * bw - 1, y1: y(q.thr), y2: y(q.thr), stroke: "var(--crit)", "stroke-width": 1.5, "stroke-dasharray": "3 2" }, svg);
+    if (k % every === 0 && !b.gap) { const g = el("svg:g", { cls: "tick" }, svg); el("svg:text", { x: cx, y: Hh - 8, "text-anchor": "middle", text: fTime.format(b.a) }, g); }
+    const hit = el("svg:rect", { x: m.l + k * bw, y: m.t, width: bw, height: ih, fill: "transparent" }, svg);
+    hit.addEventListener("pointermove", (ev) => {
+      tip.replaceChildren();
+      el("div", { cls: "h", text: `${spanTxt(b.a, b.e)}${b.gap ? " · trou de relevé" : ""}${b.night >= 0.5 ? " · nuit" : ""}` }, tip);
+      tipRow(tip, flagged.has(k) ? "var(--crit)" : "var(--accent)", signed(c.g), "voix gagnées");
+      if (b.skip) el("div", { cls: "h", text: "Plus d'1 h sans relevé : non analysé" }, tip);
+      else {
+        tipRow(tip, "var(--ink)", nf1.format(c.lam), "attendues");
+        tipRow(tip, null, q.lo === q.hi ? nf.format(q.lo) : `${nf.format(q.lo)} à ${nf.format(q.hi)}`, "fourchette normale (10–90 %)");
+        tipRow(tip, "var(--crit)", nf.format(q.thr), "seuil d'anomalie");
+        if (flagged.has(k) && c.g < q.thr) el("div", { cls: "h", text: "En rouge comme accélération isolée (comparée aux 3 h d'avant)" }, tip);
+      }
+      tipRow(tip, null, signed(b.G - c.g), "voix gagnées par les autres lieux");
+      const br = box.getBoundingClientRect(); tip.hidden = false; placeTip(tip, box, ev.clientX - br.left, ev.clientY - br.top);
+    });
+    hit.addEventListener("pointerleave", () => (tip.hidden = true));
+  });
+}
+
+function renderNight() {
+  const { nights, GN, nightH, nightGapH } = AN;
+  const tbl = $("an-night"), thead = tbl.tHead, tbody = tbl.tBodies[0];
+  thead.replaceChildren(); tbody.replaceChildren();
+  if (GN < 1) {
+    $("an-night-sub").textContent = nightH < 0.1 ? `Aucune nuit relevée en continu pour l'instant${AN.nightGapH > 0.1 ? ` (${nf1.format(AN.nightGapH)} h de nuit ignorées : trous de relevé de plus d'1 h)` : ""}.` : "Aucune voix enregistrée la nuit pour l'instant.";
+    return;
+  }
+  $("an-night-sub").textContent = `${nf.format(Math.round(GN))} voix gagnées la nuit, tous lieux confondus, sur ${nf1.format(nightH)} h de nuit relevées`
+    + (nightGapH > 0.1 ? ` (${nf1.format(nightGapH)} h de nuit ignorées : trous de relevé de plus d'1 h)` : "")
+    + ". Attendu = part de jour du lieu appliquée à l'activité nocturne des autres.";
+  const hr = el("tr", {}, thead);
+  [["Lieu", ""], ["Voix de nuit", "n"], ["Attendues", "n"], ["Part nuit / jour", "n"], ["", ""]].forEach(([l, c]) => el("th", { cls: c, text: l }, hr));
+  const nl = nights.filter((n) => n.gn >= 0.5).sort((a, b) => b.lp - a.lp || b.gn - a.gn), NMAX = 10;
+  nl.slice(0, NMAX).forEach((n) => {
+    const r = el("tr", { tabindex: 0, title: "Voir ce lieu en détail" }, tbody);
+    el("td", { text: n.p.name }, r);
+    el("td", { cls: "n", text: nf.format(Math.round(n.gn)) }, r);
+    el("td", { cls: "n", text: nf1.format(n.lam) }, r);
+    el("td", { cls: "n", text: `${nf1.format(n.sN * 100)} % / ${nf1.format(n.sD * 100)} %` }, r);
+    const td = el("td", {}, r);
+    if (n.flag) el("span", { cls: "pill " + force(n.lp)[0], text: "Anormal " + ratioTxt(n.gn, n.lam) }, td);
+    const go = () => { astate.sel = n.p.id; saveA(); renderAnomDetail(); $("an-det").scrollIntoView({ block: "start", behavior: "smooth" }); };
+    r.addEventListener("click", go);
+    r.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+  });
+  if (nl.length > NMAX) el("td", { colspan: 5, cls: "hint", text: `+ ${nl.length - NMAX} autre(s) lieu(x) avec quelques voix de nuit, sans écart notable.` }, el("tr", {}, tbody));
+  if (!tbody.children.length) el("td", { colspan: 5, cls: "empty", text: "Aucun lieu n'a gagné de voix la nuit." }, el("tr", {}, tbody));
+}
+$("an-sel").addEventListener("change", (e) => { astate.sel = e.target.value; saveA(); renderAnomDetail(); });
+for (const [id, key] of [["seg-abin", "bin"], ["seg-asens", "sens"], ["seg-adata", "data"]]) $(id).addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  astate[key] = b.dataset.v; saveA(); renderAnom();
+});
+
+/* ---------- pages ---------- */
+const onAnom = () => location.hash === "#anomalies";
+function showPage(initial) {
+  const an = onAnom();
+  $("page-main").hidden = an; $("page-anom").hidden = !an;
+  $("tab-main").removeAttribute("aria-current"); $("tab-anom").removeAttribute("aria-current");
+  $(an ? "tab-anom" : "tab-main").setAttribute("aria-current", "page");
+  document.title = an ? "Anomalies · Suivi SOS Calvaires" : "Suivi SOS Calvaires";
+  if (an) renderAnom(); else if (!initial) render();   // les graphiques se recalent sur la largeur visible
+}
+$("tab-main").addEventListener("click", (e) => { e.preventDefault(); history.replaceState(null, "", location.pathname + location.search); showPage(); });
+window.addEventListener("hashchange", showPage);
 
 /* ---------- actualisation automatique ---------- */
 // La page relit dashboard.html (régénéré à chaque relevé) toutes les 5 min, en gardant filtres, sélection et position.
@@ -1022,7 +1878,7 @@ function render() {
   const last = T[N - 1], age = (Date.now() - last) / 60e3;
   $("stamp").textContent = `Dernier relevé ${fDay.format(last)} à ${fTime.format(last)} · ${N} relevés`;
   $("live").classList.toggle("stale", age > 30);
-  renderKpis(i0, S); renderLegend(S); renderMain(i0, S); renderSlopes(S); renderInsights(S); renderTotal(i0); renderPeriods(i0); renderDuel(i0); renderTable(i0, S); renderMultiples(i0, S);
+  renderKpis(i0, S); renderLegend(S); renderMain(i0, S); renderSlopes(S); renderInsights(S); renderTotal(i0); renderPeriods(i0); renderForecast(); renderDuel(i0); renderTable(i0, S); renderMultiples(i0, S);
 }
 for (const [id, key] of [["seg-win", "win"], ["seg-metric", "metric"], ["seg-gran", "gran"]]) $(id).addEventListener("click", (e) => {
   const b = e.target.closest("button"); if (!b) return;
@@ -1031,10 +1887,11 @@ for (const [id, key] of [["seg-win", "win"], ["seg-metric", "metric"], ["seg-gra
 });
 if (N < 2) { document.querySelector(".wrap").append("Il faut au moins deux relevés."); return; }
 render();
+showPage(true); anomBadge();
 let rz, lastW = document.querySelector(".wrap").clientWidth;
 new ResizeObserver(() => {
   const w = document.querySelector(".wrap").clientWidth; if (w === lastW) return; lastW = w;
-  clearTimeout(rz); rz = setTimeout(render, 80);
+  clearTimeout(rz); rz = setTimeout(() => (onAnom() ? renderAnom() : render()), 80);
 }).observe(document.querySelector(".wrap"));
 })();
 </script>

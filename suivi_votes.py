@@ -12,7 +12,7 @@ Les compteurs viennent de l'API publique que la page du vote lit elle-même
 La page la relit toutes les 15 s ; un relevé toutes les 10 min est bien plus léger.
 
 Usage :
-  python3 suivi_votes.py            # boucle infinie, un relevé toutes les 10 min
+  python3 suivi_votes.py            # boucle infinie, un relevé toutes les 10 min, calé sur l'horloge (hh:00, hh:10…)
   python3 suivi_votes.py --once     # un seul relevé (pour cron / systemd)
   python3 suivi_votes.py --plot     # redessine seulement, sans relevé
 """
@@ -207,8 +207,9 @@ def main():
         plot()
         return
     base, key = load_config()
+    if not a.once:
+        wait_next_tick(a.interval)
     while True:
-        start = time.time()
         try:
             record(fetch(base, key))
             plot()
@@ -216,7 +217,20 @@ def main():
             print(f"[erreur] {e}", file=sys.stderr, flush=True)
         if a.once:
             return
-        time.sleep(max(1, a.interval - (time.time() - start)))
+        wait_next_tick(a.interval)
+
+
+def wait_next_tick(interval):
+    """Attend le prochain multiple de `interval` secondes sur l'horloge (300 s → hh:00, hh:05, hh:10…).
+
+    Calé sur l'heure ronde plutôt que sur l'heure de lancement : les relevés tombent toujours aux mêmes minutes,
+    et un relevé lent (graphiques, prévision) ne fait pas dériver les suivants. Les fuseaux horaires étant décalés
+    d'heures entières, c'est vrai en heure de Paris comme en UTC.
+    """
+    now = time.time()
+    nxt = (now // interval + 1) * interval
+    print(f"[suivi] prochain relevé à {datetime.fromtimestamp(nxt).strftime('%H:%M:%S')}", flush=True)
+    time.sleep(nxt - now)
 
 
 if __name__ == "__main__":
