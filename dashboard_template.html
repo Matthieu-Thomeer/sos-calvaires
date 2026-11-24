@@ -210,6 +210,8 @@ td .zero { color: var(--muted); }
 .heatwrap svg { display: block; }
 .heatwrap .rowlab { cursor: pointer; }
 .heatwrap .rowlab:hover text { fill: var(--ink); }
+#b-tbl tbody tr { cursor: pointer; }
+#b-tbl tr.cur { background: var(--accent-wash); }
 .empty { color: var(--ink2); font-size: 13.5px; padding: 8px 0; }
 footer { color: var(--muted); font-size: 12px; display: grid; gap: 4px; }
 .toast { position: fixed; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
@@ -230,6 +232,7 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 4px; }
   <nav class="tabs" aria-label="Pages">
     <a href="#" id="tab-main">Tableau de bord</a>
     <a href="#anomalies" id="tab-anom">Anomalies <span class="badge" id="an-badge"></span></a>
+    <a href="#bilan" id="tab-bilan">Bilan des prévisions</a>
   </nav>
 
   <div class="page" id="page-main">
@@ -340,11 +343,15 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 4px; }
   <section class="card" id="duel">
     <div class="card-h">
       <div><h2>Duel entre deux lieux</h2>
-        <div class="sub">Quand le lieu de derrière passera-t-il devant ? Deux projections : le modèle choisi dans la carte Prévision (fond + boost amorti × cycle horaire) et la droite au rythme actuel.</div></div>
-      <div><span class="ctl-label">Rythme linéaire calculé sur</span>
-        <span class="seg" id="seg-basis" role="group" aria-label="Rythme calculé sur">
-          <button data-v="60">1 h</button><button data-v="180" aria-pressed="true">3 h</button><button data-v="all">Tout le suivi</button>
-        </span></div>
+        <div class="sub">Quand le lieu de derrière passera-t-il devant ? Projections : un ou deux modèles au choix (fond + boost amorti × cycle horaire), à comparer, et la droite au rythme actuel.</div></div>
+      <div class="controls">
+        <div><span class="ctl-label">Modèles</span>
+          <span class="seg" id="seg-dmodel" role="group" aria-label="Modèles affichés (un ou deux)" title="Un ou deux modèles : cliquer pour ajouter ou retirer"></span></div>
+        <div><span class="ctl-label">Rythme linéaire calculé sur</span>
+          <span class="seg" id="seg-basis" role="group" aria-label="Rythme calculé sur">
+            <button data-v="60">1 h</button><button data-v="180" aria-pressed="true">3 h</button><button data-v="all">Tout le suivi</button>
+          </span></div>
+      </div>
     </div>
     <div class="duel-pick">
       <label class="pick"><span class="k" style="background:var(--s1)"></span><span class="sr">Lieu A</span><select id="duel-a"></select></label>
@@ -356,12 +363,7 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 4px; }
       <div class="duel-c" id="duel-ca"></div>
       <div class="duel-c" id="duel-cb"></div>
     </div>
-    <div class="legend" aria-hidden="true">
-      <span class="chip ghost" style="cursor:default"><span class="k" style="background:var(--ink2)"></span>Mesuré</span>
-      <span class="chip ghost" style="cursor:default"><span class="k" style="background:repeating-linear-gradient(90deg,var(--ink2) 0 5px,transparent 5px 8px)"></span>Modèle</span>
-      <span class="chip ghost" style="cursor:default"><span class="k" style="background:var(--ink2);opacity:.2;height:8px"></span>Fourchette 10–90 % du modèle</span>
-      <span class="chip ghost" style="cursor:default"><span class="k" style="background:repeating-linear-gradient(90deg,var(--ink2) 0 2px,transparent 2px 5px)"></span>Linéaire</span>
-    </div>
+    <div class="legend" id="duel-legend" aria-hidden="true"></div>
     <div class="chart" id="duel-chart"></div>
     <div><h3 class="h3">Face à tous les autres : lieu A, <span id="duel-vs"></span></h3>
       <div class="sub">Dépassements prévus dans un sens ou dans l'autre, du plus proche au plus lointain. Cliquer une ligne pour l'afficher en duel.</div></div>
@@ -462,6 +464,44 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 4px; }
         « Depuis le 24 nov. 13:35 » ne garde que les relevés continus : l'habitude est plus fiable, mais repose sur moins d'heures,
         donc les seuils sont plus prudents au début.</p>
       <p>Une anomalie n'est pas une preuve de fraude : une relance par e-mail ou un message dans un groupe produit le même signal. Elle signale ce qui mérite un coup d'œil.</p>
+    </details>
+  </div>
+
+  <div class="page" id="page-bilan" hidden>
+    <section class="kpis" id="b-kpis" aria-label="Résumé du bilan des prévisions"></section>
+    <div class="controls" role="group" aria-label="Réglages du bilan">
+      <div><span class="ctl-label">Horizon</span>
+        <span class="seg" id="seg-bh"><button data-v="1">1 h</button><button data-v="3">3 h</button><button data-v="6">6 h</button><button data-v="12">12 h</button><button data-v="24">24 h</button><button data-v="48">48 h</button></span></div>
+      <div><span class="ctl-label">Prévisions</span>
+        <span class="seg" id="seg-bsrc"><button data-v="all" title="Y compris les prévisions recalculées après coup sur les données de l'époque">Toutes</button><button data-v="live">En direct seulement</button></span></div>
+      <label class="pick" style="flex:0 1 380px"><span class="sr">Série</span><select id="b-sel"></select></label>
+    </div>
+
+    <section class="card">
+      <div class="card-h"><div><h2>Précision par horizon</h2><div class="sub" id="b-tbl-sub"></div></div></div>
+      <div class="tablewrap"><table class="ptable" id="b-tbl"><thead></thead><tbody></tbody></table></div>
+    </section>
+
+    <section class="card">
+      <div class="card-h"><div><h2>Prévu ou réel</h2><div class="sub" id="b-chart-sub"></div></div></div>
+      <div class="legend" id="b-legend" aria-hidden="true"></div>
+      <div class="chart" id="b-chart"></div>
+      <div class="hint">Points pleins : prévisions faites en direct. Points creux : prévisions reconstituées, recalculées après coup avec les seuls relevés disponibles à l'époque.</div>
+    </section>
+
+    <section class="card">
+      <div class="card-h"><div><h2>Prévision de la clôture, d'heure en heure</h2><div class="sub" id="b-end-sub"></div></div></div>
+      <div class="legend" id="b-end-legend" aria-hidden="true"></div>
+      <div class="chart" id="b-end"></div>
+    </section>
+
+    <details class="fc-how card"><summary>Comment fonctionne le bilan ?</summary>
+      <p>À chaque mise à jour du tableau de bord, au plus une fois par heure de relevés, on garde ce que chaque modèle prévoit pour chaque lieu et
+        pour le total : dans 1, 3, 6, 12, 24 et 48 h, et à la clôture. Ces prévisions sont conservées dans le fichier <code>previsions.jsonl</code>
+        du dépôt et ne sont jamais recalculées ensuite : c'est une vraie mémoire de ce qui avait été annoncé.</p>
+      <p>Quand l'échéance est passée, on la compare aux voix réellement relevées à ce moment-là. Les échéances tombées dans un trou de relevé
+        de plus d'1 h ne sont pas comptées. Les prévisions « reconstituées » ont été recalculées après coup pour les heures précédant la mise
+        en place de cette mémoire, en n'utilisant que les relevés disponibles à l'époque.</p>
     </details>
   </div>
 
@@ -974,8 +1014,10 @@ function defaultSel(S) {
 const byIdP = new Map(P.map((p) => [p.id, p]));
 const fWd = new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, weekday: "short" });
 const MAX_PROJ_H = 14 * 24;
-const duel = { a: null, b: null, basis: "180" };
+const duel = { a: null, b: null, basis: "180", models: [] };
 try { const s = JSON.parse(store.get("sos-duel") || "null"); if (s && byIdP.has(s.a) && byIdP.has(s.b) && s.a !== s.b) Object.assign(duel, s); } catch {}
+duel.models = (Array.isArray(duel.models) ? duel.models : []).filter((mk) => FC_MODELS[mk]).slice(0, 2);
+if (!duel.models.length && Object.keys(FC_MODELS).length) duel.models = [FC_MODELS[FCS.best] ? FCS.best : Object.keys(FC_MODELS)[0]];
 const saveDuel = () => store.set("sos-duel", JSON.stringify(duel));
 
 function rateOf(p, basis) {
@@ -1003,22 +1045,25 @@ function parisOffset(t) {
   const d = new Date(t);
   return Date.parse(d.toLocaleString("en-US", { timeZone: TZ })) - Date.parse(d.toLocaleString("en-US", { timeZone: "UTC" }));
 }
-/* Projection du modèle différentiel (prevision.py) : courbe centrale sur FC.grid, tirages à la clôture. */
-const fcOk = () => FC.ok && FC.places;
+/* Projections des modèles (prevision.py) : courbe centrale sur la grille commune, tirages à la clôture.
+   Le duel a son propre choix de modèles (un ou deux, pour les comparer), indépendant de la carte Prévision. */
+const fcOk = () => FCS.ok && Object.keys(FC_MODELS).length > 0;
+const MODEL_DASH = { jn: "7 5", jnb: "13 3 2 3" };
+const mName = (mk) => (FC_MODELS[mk] ? FC_MODELS[mk].name.toLowerCase() : mk);
 function interpG(arr, t) {
-  const G = FC.grid; if (t <= G[0]) return arr[0];
+  const G = FCS.grid; if (t <= G[0]) return arr[0];
   for (let i = 1; i < G.length; i++) if (t <= G[i]) return arr[i - 1] + (arr[i] - arr[i - 1]) * (t - G[i - 1]) / (G[i] - G[i - 1]);
   return arr[arr.length - 1];
 }
-function modelCross(a, b) {
-  if (!fcOk()) return null;
-  const G = FC.grid, fa = FC.places[a.id], fb = FC.places[b.id], ca = fa.c, cb = fb.c, k = G.length - 1;
+function modelCross(a, b, mk) {
+  const md = FC_MODELS[mk]; if (!fcOk() || !md || !md.places) return null;
+  const G = FCS.grid, fa = md.places[a.id], fb = md.places[b.id], ca = fa.c, cb = fb.c, k = G.length - 1;
   const va = a.v[N - 1], vb = b.v[N - 1], s0 = Math.sign(va - vb);
   // chances que A soit devant à la clôture (tirages indépendants des deux lieux)
   let pA = null;
   if (fa.draws && fb.draws) { let w = 0; const n = Math.min(fa.draws.length, fb.draws.length);
     for (let i = 0; i < n; i++) w += fa.draws[i] > fb.draws[i] ? 1 : fa.draws[i] === fb.draws[i] ? 0.5 : 0; pA = w / n; }
-  const out = { pA, gapEnd: ca[k] - cb[k], ra: fa.baseNow, rb: fb.baseNow, hours: Infinity };
+  const out = { mk, pA, gapEnd: ca[k] - cb[k], ra: fa.baseNow, rb: fb.baseNow, hours: Infinity };
   if (s0 === 0) return { ...out, tie: true };
   out.lead = s0 > 0 ? a : b; out.chase = s0 > 0 ? b : a;
   for (let i = 1; i <= k; i++) {
@@ -1030,8 +1075,8 @@ function modelCross(a, b) {
   }
   return out;
 }
-const closeT = () => (fcOk() ? FC.end : Infinity);
-const closeTxt = () => (fcOk() && FC.isEnd ? "avant la clôture" : "sur l'horizon de prévision");
+const closeT = () => (fcOk() ? FCS.end : Infinity);
+const closeTxt = () => (fcOk() && FCS.isEnd ? "avant la clôture" : "sur l'horizon de prévision");
 /* Un dépassement compte s'il arrive avant la clôture (ou dans les deux semaines sans date de clôture connue). */
 const inTime = (hours) => isFinite(hours) && T[N - 1] + hours * H <= Math.min(closeT(), T[N - 1] + MAX_PROJ_H * H);
 
@@ -1039,7 +1084,7 @@ function defaultDuel() {
   const ranked = P.slice().sort((x, y) => y.v[N - 1] - x.v[N - 1]);
   let best = null;
   for (let k = 0; k + 1 < ranked.length; k++) {
-    const mc = modelCross(ranked[k + 1], ranked[k]), lc = crossing(ranked[k], ranked[k + 1], duel.basis);
+    const mc = modelCross(ranked[k + 1], ranked[k], duel.models[0]), lc = crossing(ranked[k], ranked[k + 1], duel.basis);
     const h = Math.min(mc && !mc.tie ? mc.hours : Infinity, !lc.tie ? lc.hours : Infinity);
     if (isFinite(h) && (!best || h < best.h)) best = { a: ranked[k + 1].id, b: ranked[k].id, h };
   }
@@ -1058,7 +1103,11 @@ function renderDuel(i0) {
   if (!duel.a || !duel.b) defaultDuel();
   fillSelects();
   for (const b of $("seg-basis").querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.v === duel.basis));
-  const A = byIdP.get(duel.a), B = byIdP.get(duel.b), c = crossing(A, B, duel.basis), mc = modelCross(A, B);
+  const segM = $("seg-dmodel"); segM.replaceChildren();
+  for (const [mk, md] of Object.entries(FC_MODELS)) el("button", { "data-v": mk, "aria-pressed": String(duel.models.includes(mk)), text: md.name + (mk === FCS.best && Object.keys(FC_MODELS).length > 1 ? " ★" : "") }, segM);
+  segM.closest("div").hidden = !Object.keys(FC_MODELS).length;
+  const A = byIdP.get(duel.a), B = byIdP.get(duel.b), c = crossing(A, B, duel.basis);
+  const mcs = duel.models.map((mk) => modelCross(A, B, mk)).filter(Boolean), mc = mcs[0] || null;
   const basisTxt = duel.basis === "all" ? "sur tout le suivi" : duel.basis === "60" ? "sur la dernière heure" : "sur les 3 dernières heures";
   const tLast = T[N - 1];
   const nameB = (p) => ({ b: p.name });
@@ -1071,17 +1120,17 @@ function renderDuel(i0) {
   const block = (label) => { const d = el("div", {}, two); el("div", { cls: "duel-m", text: label }, d);
     return { big: el("div", { cls: "duel-big" }, d), line: el("div", { cls: "duel-line" }, d), why: el("div", { cls: "sub" }, d) }; };
 
-  if (mc) {
-    const m = block("Modèle (fond + boost × jour/nuit)");
+  for (const mc of mcs) {
+    const m = block(`Modèle ${mName(mc.mk)}`);
     if (mc.tie) { m.big.textContent = "À égalité"; put(m.line, ["Même nombre de voix aujourd'hui."]); }
     else if (isFinite(mc.hours)) {
       m.big.textContent = "dans " + fmtDur(mc.hours);
       put(m.line, [nameB(mc.chase), " passe devant ", nameB(mc.lead), `, ${fmtWhen(mc.t)}`]);
     } else {
-      m.big.textContent = FC.isEnd ? "Pas avant la clôture" : "Pas sur l'horizon"; m.big.classList.add("txt");
+      m.big.textContent = FCS.isEnd ? "Pas avant la clôture" : "Pas sur l'horizon"; m.big.classList.add("txt");
       put(m.line, [nameB(mc.chase), " reste derrière ", nameB(mc.lead), `, avec environ ${nf.format(Math.round(Math.abs(mc.gapEnd)))} voix d'écart à la fin.`]);
     }
-    put(m.why, [`Rythmes moyens sur 24 h : ${nf1.format(mc.ra)} et ${nf1.format(mc.rb)} voix/h, cycle jour/nuit compris.`]);
+    put(m.why, [`Rythmes moyens sur 24 h : ${nf1.format(mc.ra)} et ${nf1.format(mc.rb)} voix/h, cycle horaire compris.`]);
   }
   const l = block(`Linéaire (rythme ${basisTxt})`);
   if (c.tie) { l.big.textContent = "À égalité"; put(l.line, ["Les deux lieux ont exactement le même nombre de voix."]); }
@@ -1098,11 +1147,11 @@ function renderDuel(i0) {
     put(l.why, [c.rc === c.rl ? `Même rythme (${nf1.format(c.rc)} voix/h) : l'écart de ${nf.format(c.gap)} voix reste stable.`
       : `${c.lead.name} creuse l'écart de ${nf1.format(c.rl - c.rc)} voix/h (écart actuel : ${nf.format(c.gap)} voix).`]);
   }
-  if (mc && mc.pA !== null) {
+  for (const mc of mcs) if (mc.pA !== null) {
     const pr = el("div", { cls: "duel-line" }, v);
-    put(pr, [`Chances d'être devant ${FC.isEnd ? "à la clôture" : "à la fin de l'horizon"} (modèle) : `, nameB(A), ` ${Math.round(mc.pA * 100)} %, `, nameB(B), ` ${Math.round((1 - mc.pA) * 100)} %.`]);
+    put(pr, [`Chances d'être devant ${FCS.isEnd ? "à la clôture" : "à la fin de l'horizon"} (modèle ${mName(mc.mk)}) : `, nameB(A), ` ${Math.round(mc.pA * 100)} %, `, nameB(B), ` ${Math.round((1 - mc.pA) * 100)} %.`]);
   }
-  el("div", { cls: "hint", text: mc ? "Le modèle tient compte du ralentissement des appels au vote et du cycle jour/nuit, la droite non. Le test rétrospectif de la carte Prévision dit lequel est le plus fiable en ce moment."
+  el("div", { cls: "hint", text: mc ? "Les modèles tiennent compte du ralentissement des appels au vote et du cycle horaire, la droite non. Le test rétrospectif de la carte Prévision et la page Bilan des prévisions disent lequel est le plus fiable."
     : "Projection linéaire au rythme choisi : elle change si l'un des lieux accélère ou ralentit." }, v);
 
   // Fiches A / B
@@ -1113,20 +1162,27 @@ function renderDuel(i0) {
     el("span", { text: p.name }, h);
     el("div", { cls: "v", text: nf.format(p.v[N - 1]) }, box);
     el("div", { cls: "d", text: `${ranks.get(p.id)}e · ${nf1.format(r)} voix/h ${basisTxt}` }, box);
-    if (fcOk()) { const f = FC.places[p.id], kk = FC.grid.length - 1;
-      el("div", { cls: "d", text: `Prévu ${FC.isEnd ? "à la clôture" : "en fin d'horizon"} : ${nf.format(Math.round(f.q50[kk]))} (${nf.format(Math.round(f.q10[kk]))} – ${nf.format(Math.round(f.q90[kk]))})` }, box); }
+    for (const mk of duel.models) { const f = FC_MODELS[mk].places[p.id], kk = FCS.grid.length - 1;
+      el("div", { cls: "d", text: `Prévu ${FCS.isEnd ? "à la clôture" : "en fin d'horizon"} (${mName(mk)}) : ${nf.format(Math.round(f.q50[kk]))} (${nf.format(Math.round(f.q10[kk]))} – ${nf.format(Math.round(f.q90[kk]))})` }, box); }
   }
 
-  renderDuelChart(i0, A, B, c, mc);
+  const lg = $("duel-legend"); lg.replaceChildren();
+  const chip = (bg, txt) => { const s0 = el("span", { cls: "chip ghost", style: "cursor:default" }, lg); const k = el("span", { cls: "k" }, s0); k.setAttribute("style", bg); s0.append(txt); };
+  chip("background:var(--ink2)", "Mesuré");
+  for (const mk of duel.models) chip(`background:repeating-linear-gradient(90deg,var(--ink2) 0 ${MODEL_DASH[mk].split(" ")[0]}px,transparent ${MODEL_DASH[mk].split(" ")[0]}px ${+MODEL_DASH[mk].split(" ")[0] + 3}px)`, `Modèle ${mName(mk)}`);
+  if (duel.models.length) chip("background:var(--ink2);opacity:.2;height:8px", duel.models.length > 1 ? "Fourchettes 10–90 % des modèles" : "Fourchette 10–90 % du modèle");
+  chip("background:repeating-linear-gradient(90deg,var(--ink2) 0 2px,transparent 2px 5px)", "Linéaire");
+  renderDuelChart(i0, A, B, c, mcs);
   renderDuelTable(A);
 }
 
-function renderDuelChart(i0, A, B, c, mc) {
+function renderDuelChart(i0, A, B, c, mcs) {
+  const mods = duel.models.filter((mk) => FC_MODELS[mk] && FC_MODELS[mk].places);
   const box = $("duel-chart"); box.replaceChildren();
   const tLast = T[N - 1], hist = tLast - T[i0];
   let tEnd = tLast + Math.max(hist * 0.35, 2 * H);
   const showCross = !c.tie && inTime(c.hours);
-  if (fcOk()) tEnd = FC.end;
+  if (mods.length) tEnd = FCS.end;
   else if (showCross) tEnd = Math.max(tEnd, tLast + c.hours * H * 1.15);
   const W = box.clientWidth || 900, Hh = 320, m = { l: 58, r: 16, t: 14, b: 28 }, iw = W - m.l - m.r, ih = Hh - m.t - m.b;
   const proj = (p, r, t) => p.v[N - 1] + r * (t - tLast) / H;
@@ -1134,7 +1190,7 @@ function renderDuelChart(i0, A, B, c, mc) {
   for (const [p, r] of [[A, c.ra], [B, c.rb]]) {
     for (let i = i0; i < N; i++) all.push(p.v[i]);
     all.push(proj(p, r, tEnd));
-    if (fcOk()) { const f = FC.places[p.id]; all.push(...f.q10, ...f.q90); }
+    for (const mk of mods) { const f = FC_MODELS[mk].places[p.id]; all.push(...f.q10, ...f.q90); }
   }
   const yt = niceTicks(Math.min(...all), Math.max(...all), 5), y0 = yt[0], y1 = yt[yt.length - 1];
   const x = (t) => m.l + (t - T[i0]) / (tEnd - T[i0]) * iw, y = (v) => m.t + ih - (v - y0) / (y1 - y0 || 1) * ih;
@@ -1155,13 +1211,13 @@ function renderDuelChart(i0, A, B, c, mc) {
   }
   el("svg:line", { x1: x(tLast), x2: x(tLast), y1: m.t, y2: m.t + ih, stroke: "var(--muted)", "stroke-width": 1 }, svg);
   el("svg:text", { x: x(tLast) + 6, y: m.t + 11, text: "projection →", style: "font-size:10.5px;fill:var(--muted)" }, svg);
-  const G = fcOk() ? FC.grid : null;
+  const G = mods.length ? FCS.grid : null;
   const line = (ts, vs) => ts.map((t, i) => `${i ? "L" : "M"}${x(t).toFixed(1)},${y(vs[i]).toFixed(1)}`).join("");
   for (const [p, r, col] of [[A, c.ra, "var(--s1)"], [B, c.rb, "var(--s2)"]]) {
-    if (G) {
-      const f = FC.places[p.id], k = G.length - 1;
+    for (const mk of mods) {
+      const f = FC_MODELS[mk].places[p.id], k = G.length - 1;
       const band = line(G, f.q90) + G.slice().reverse().map((t, i) => `L${x(t).toFixed(1)},${y(f.q10[k - i]).toFixed(1)}`).join("") + "Z";
-      el("svg:path", { d: band, fill: col, opacity: .13, stroke: "none" }, svg);
+      el("svg:path", { d: band, fill: col, opacity: mods.length > 1 ? .08 : .13, stroke: "none" }, svg);
     }
   }
   for (const [p, r, col] of [[A, c.ra, "var(--s1)"], [B, c.rb, "var(--s2)"]]) {
@@ -1169,7 +1225,7 @@ function renderDuelChart(i0, A, B, c, mc) {
     el("svg:path", { d: d.solid, fill: "none", stroke: col, "stroke-width": 2, "stroke-linejoin": "round" }, svg);
     if (d.dashed) el("svg:path", { d: d.dashed, fill: "none", stroke: col, "stroke-width": 1.5, "stroke-dasharray": "2 3", opacity: .8 }, svg);
     el("svg:line", { x1: x(tLast), y1: y(p.v[N - 1]), x2: x(tEnd), y2: y(proj(p, r, tEnd)), stroke: col, "stroke-width": 1.5, "stroke-dasharray": "1.5 4", "stroke-linecap": "round", opacity: .9 }, svg);
-    if (G) el("svg:path", { d: line(G, FC.places[p.id].c), fill: "none", stroke: col, "stroke-width": 2, "stroke-dasharray": "7 5", "stroke-linecap": "round" }, svg);
+    for (const mk of mods) el("svg:path", { d: line(G, FC_MODELS[mk].places[p.id].c), fill: "none", stroke: col, "stroke-width": 2, "stroke-dasharray": MODEL_DASH[mk] || "7 5", "stroke-linecap": "round" }, svg);
     el("svg:circle", { cx: x(tLast), cy: y(p.v[N - 1]), r: 4, fill: col, stroke: "var(--surface)", "stroke-width": 2 }, svg);
   }
   const mark = (tc, vc, label, strong, below) => {
@@ -1178,7 +1234,7 @@ function renderDuelChart(i0, A, B, c, mc) {
     el("svg:text", { x: x(tc) + (right ? -10 : 10), y: y(vc) + (below ? 20 : -10), "text-anchor": right ? "end" : "start",
       text: label, style: `font-size:11.5px;font-weight:600;fill:var(${strong ? "--ink" : "--ink2"})` }, svg);
   };
-  if (mc && !mc.tie && isFinite(mc.hours)) mark(mc.t, interpG(FC.places[A.id].c, mc.t), `Modèle · ${fmtWhen(mc.t)}`, true, false);
+  mcs.forEach((mc, i) => { if (!mc.tie && isFinite(mc.hours)) mark(mc.t, interpG(FC_MODELS[mc.mk].places[A.id].c, mc.t), `${mcs.length > 1 ? "Modèle " + mName(mc.mk) : "Modèle"} · ${fmtWhen(mc.t)}`, true, i > 0); });
   if (showCross && tLast + c.hours * H <= tEnd) { const tc = tLast + c.hours * H; mark(tc, proj(A, c.ra, tc), `Linéaire · ${fmtWhen(tc)}`, false, true); }
   else if (!c.tie && isFinite(c.hours)) {
     el("svg:text", { x: m.l + iw - 4, y: m.t + 11, "text-anchor": "end", style: "font-size:10.5px;fill:var(--muted)",
@@ -1201,10 +1257,10 @@ function renderDuelChart(i0, A, B, c, mc) {
       tipRow(tip, null, signed(A.v[best] - B.v[best]), "écart A − B");
     } else {
       el("div", { cls: "h", text: `${fDay.format(t)} · ${fTime.format(t)} · projection` }, tip);
-      if (G) { const ma = interpG(FC.places[A.id].c, t), mb = interpG(FC.places[B.id].c, t);
-        tipRow(tip, "var(--s1)", nf.format(Math.round(ma)), `${A.name} (modèle)`);
-        tipRow(tip, "var(--s2)", nf.format(Math.round(mb)), `${B.name} (modèle)`);
-        tipRow(tip, null, signed(Math.round(ma - mb)), "écart A − B (modèle)"); }
+      for (const mk of mods) { const ma = interpG(FC_MODELS[mk].places[A.id].c, t), mb = interpG(FC_MODELS[mk].places[B.id].c, t);
+        tipRow(tip, "var(--s1)", nf.format(Math.round(ma)), `${A.name} (${mName(mk)})`);
+        tipRow(tip, "var(--s2)", nf.format(Math.round(mb)), `${B.name} (${mName(mk)})`);
+        tipRow(tip, null, signed(Math.round(ma - mb)), `écart A − B (${mName(mk)})`); }
       const la = proj(A, c.ra, t), lb = proj(B, c.rb, t);
       tipRow(tip, null, signed(Math.round(la - lb)), "écart A − B (linéaire)");
     }
@@ -1218,14 +1274,14 @@ function renderDuelTable(A) {
   const tbl = $("duel-tbl"), thead = tbl.tHead, tbody = tbl.tBodies[0];
   thead.replaceChildren(); tbody.replaceChildren();
   $("duel-vs").textContent = A.name;
-  const hasM = fcOk();
+  const mods = duel.models.filter((mk) => FC_MODELS[mk] && FC_MODELS[mk].places), two = mods.length > 1;
   const hr = el("tr", {}, thead);
-  [["Lieu", ""], ["Voix", "n"], ["Écart", "n"], ["Qui passe devant", ""], ...(hasM ? [["Quand (modèle)", "n"]] : []), ["Quand (linéaire)", "n"],
-   ...(hasM ? [[`A devant ${FC.isEnd ? "à la clôture" : "à la fin"}`, "n"]] : [])].forEach(([l, cl]) => el("th", { cls: cl, text: l }, hr));
+  [["Lieu", ""], ["Voix", "n"], ["Écart", "n"], ["Qui passe devant", ""], ...mods.map((mk) => [`Quand (${two ? mName(mk) : "modèle"})`, "n"]), ["Quand (linéaire)", "n"],
+   ...mods.map((mk) => [`A devant ${FCS.isEnd ? "à la clôture" : "à la fin"}${two ? " (" + mName(mk) + ")" : ""}`, "n"])].forEach(([l, cl]) => el("th", { cls: cl, text: l }, hr));
   const rows = P.filter((q) => q.id !== A.id).map((q) => {
-    const c = crossing(A, q, duel.basis), mc = modelCross(A, q);
-    const hm = mc && !mc.tie ? mc.hours : Infinity, hl = !c.tie && inTime(c.hours) ? c.hours : Infinity;
-    return { q, c, mc, h: Math.min(hm, hl), gap: Math.abs(q.v[N - 1] - A.v[N - 1]) };
+    const c = crossing(A, q, duel.basis), ms = mods.map((mk) => modelCross(A, q, mk));
+    const hm = Math.min(Infinity, ...ms.map((mc) => (!mc.tie ? mc.hours : Infinity))), hl = !c.tie && inTime(c.hours) ? c.hours : Infinity;
+    return { q, c, ms, h: Math.min(hm, hl), gap: Math.abs(q.v[N - 1] - A.v[N - 1]) };
   });
   rows.sort((r1, r2) => (r1.h - r2.h) || (r1.gap - r2.gap));
   const finite = rows.filter((r) => isFinite(r.h)), inf = rows.filter((r) => !isFinite(r.h));
@@ -1235,7 +1291,7 @@ function renderDuelTable(A) {
     else if (isFinite(hours) && T[N - 1] + hours * H > closeT()) el("span", { cls: "zero", text: "après la clôture" }, td);
     else el("span", { cls: "inf-s", text: "∞", title: "Jamais" }, td);
   };
-  for (const { q, c, mc, h } of [...finite, ...closeInf]) {
+  for (const { q, c, ms, h } of [...finite, ...closeInf]) {
     const r = el("tr", { tabindex: 0, title: "Comparer en détail" }, tbody);
     const td = el("td", {}, r); el("div", { cls: "nm", text: q.name }, td);
     el("td", { cls: "n", text: nf.format(q.v[N - 1]) }, r);
@@ -1245,19 +1301,26 @@ function renderDuelTable(A) {
     else if (!isFinite(h)) el("span", { cls: "zero", text: "Personne" }, who);
     else if (c.chase === A) el("span", { cls: "pill up", text: "▲ Le lieu A passe devant" }, who);
     else el("span", { cls: "pill down", text: "▼ Ce lieu passe devant A" }, who);
-    if (hasM) when(el("td", { cls: "n" }, r), mc.tie ? Infinity : mc.hours, mc.t);
+    for (const mc of ms) when(el("td", { cls: "n" }, r), mc.tie ? Infinity : mc.hours, mc.t);
     when(el("td", { cls: "n" }, r), c.tie ? Infinity : c.hours, T[N - 1] + c.hours * H);
-    if (hasM) el("td", { cls: "n", text: mc.pA === null ? "—" : `${Math.round(mc.pA * 100)} %` }, r);
+    for (const mc of ms) el("td", { cls: "n", text: mc.pA === null ? "—" : `${Math.round(mc.pA * 100)} %` }, r);
     const go = () => { duel.b = q.id; saveDuel(); render(); $("duel").scrollIntoView({ block: "start" }); };
     r.addEventListener("click", go);
     r.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
   }
   const rest = inf.length - closeInf.length;
-  $("duel-rest").textContent = rest > 0 ? `Pour les ${rest} autres lieux : aucun dépassement prévu ${closeTxt()}, ni par le modèle ni par la droite.` : "";
+  $("duel-rest").textContent = rest > 0 ? `Pour les ${rest} autres lieux : aucun dépassement prévu ${closeTxt()}, ni par ${two ? "les modèles" : "le modèle"} ni par la droite.` : "";
 }
 $("duel-a").addEventListener("change", (e) => { duel.a = e.target.value; if (duel.a === duel.b) duel.b = P.find((p) => p.id !== duel.a).id; saveDuel(); render(); });
 $("duel-b").addEventListener("change", (e) => { duel.b = e.target.value; if (duel.a === duel.b) duel.a = P.find((p) => p.id !== duel.b).id; saveDuel(); render(); });
 $("duel-swap").addEventListener("click", () => { [duel.a, duel.b] = [duel.b, duel.a]; saveDuel(); render(); });
+$("seg-dmodel").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b || !FC_MODELS[b.dataset.v]) return;
+  const mk = b.dataset.v, on = duel.models.includes(mk);
+  if (on) { if (duel.models.length > 1) duel.models = duel.models.filter((x) => x !== mk); }
+  else { duel.models.push(mk); if (duel.models.length > 2) duel.models.shift(); }
+  saveDuel(); render();
+});
 $("seg-basis").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; duel.basis = b.dataset.v; saveDuel(); render(); });
 
 /* ---------- prévision (modèle fond + boost amorti × cycle jour/nuit, calculé par prevision.py) ---------- */
@@ -1826,15 +1889,225 @@ for (const [id, key] of [["seg-abin", "bin"], ["seg-asens", "sens"], ["seg-adata
   astate[key] = b.dataset.v; saveA(); renderAnom();
 });
 
+/* ---------- bilan des prévisions ---------- */
+// D.hist : prévisions enregistrées (prevision.py, une par heure de données) ; on les confronte aux voix réelles relevées depuis.
+const HIST = Array.isArray(D.hist) ? D.hist : [];
+const BMOD = [
+  { k: "jnb", name: "Jour/nuit/boulot", col: "var(--s3)", band: true },
+  { k: "jn", name: "Jour/nuit", col: "var(--s7)", band: true },
+  { k: "lin", name: "Linéaire (tout le suivi)", col: "var(--ink2)", band: false },
+  { k: "lin3", name: "Linéaire (3 h)", col: "var(--s4)", band: false },
+];
+const BH = [1, 3, 6, 12, 24, 48];
+const bstate = { h: 3, s: "all", src: "all" };
+try { const s = JSON.parse(store.get("sos-bilan") || "null"); if (s) { if (BH.includes(s.h)) bstate.h = s.h; if (s.s === "all" || s.s === "total" || byIdP.has(s.s)) bstate.s = s.s; if (["all", "live"].includes(s.src)) bstate.src = s.src; } } catch {}
+const saveB = () => store.set("sos-bilan", JSON.stringify(bstate));
+
+// Voix réelles d'une série à l'instant t ; null si t n'est pas encore relevé ou tombe dans un trou de plus d'1 h.
+function actualAt(key, t) {
+  if (t < T[0] || t > T[N - 1]) return null;
+  let i = 0; while (i < N - 2 && T[i + 1] < t) i++;
+  if (T[i + 1] - T[i] > SKIP_MS && t > T[i] && t < T[i + 1]) return null;
+  const v = key === "total" ? total : byIdP.get(key).v, f = T[i + 1] > T[i] ? (t - T[i]) / (T[i + 1] - T[i]) : 0;
+  return v[i] + Math.min(1, Math.max(0, f)) * (v[i + 1] - v[i]);
+}
+// Prévision d'un modèle pour une série, à l'horizon d'indice hi (dernier indice = clôture) : { c, lo, hi } ou null.
+function predOf(r, mk, key, hi) {
+  const m = r.m && r.m[mk]; if (!m) return null;
+  let row;
+  if (key === "total") row = m.total;
+  else { const j = r.ids.indexOf(key); if (j < 0) return null; row = m.p[j]; }
+  const v = row && row[hi]; if (v == null) return null;
+  return Array.isArray(v) ? { c: v[0], lo: v[1], hi: v[2] } : { c: v, lo: null, hi: null };
+}
+const histRows = () => HIST.filter((r) => bstate.src === "all" || !r.retro);
+
+// Erreurs d'un modèle à un horizon : sur une série, ou sur tous les lieux (erreur par lieu).
+function evalModel(mk, hIdx, key) {
+  const keys = key === "all" ? P.map((p) => p.id) : [key];
+  let n = 0, sAbs = 0, sBias = 0, nIn = 0, nBand = 0;
+  for (const r of histRows()) {
+    const h = r.h ? r.h[hIdx] : BH[hIdx]; if (h === undefined) continue;
+    const t = r.t + h * H;
+    for (const k of keys) {
+      const p = predOf(r, mk, k, hIdx), a = p && actualAt(k, t); if (!p || a === null) continue;
+      const e = p.c - a; n++; sAbs += Math.abs(e); sBias += e;
+      if (p.lo !== null) { nBand++; if (a >= p.lo - 0.5 && a <= p.hi + 0.5) nIn++; }
+    }
+  }
+  return { n, mae: n ? sAbs / n : null, bias: n ? sBias / n : null, cover: nBand ? nIn / nBand : null };
+}
+
+function renderBilan() {
+  for (const b of $("seg-bh").querySelectorAll("button")) b.setAttribute("aria-pressed", String(+b.dataset.v === bstate.h));
+  for (const b of $("seg-bsrc").querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.v === bstate.src));
+  const sel = $("b-sel");
+  if (!sel.options.length) {
+    el("option", { value: "all", text: "Tous les lieux (erreur moyenne par lieu)" }, sel);
+    el("option", { value: "total", text: "Total des voix (tous lieux)" }, sel);
+    P.slice().sort((a, b) => b.v[N - 1] - a.v[N - 1]).forEach((p, k) => el("option", { value: p.id, text: `${k + 1}. ${p.name}` }, sel));
+  }
+  sel.value = bstate.s;
+  const rows = histRows(), nRetro = HIST.filter((r) => r.retro).length, hIdx = BH.indexOf(bstate.h);
+  const has = (mk) => HIST.some((r) => r.m && r.m[mk]);
+  const mods = BMOD.filter((m) => has(m.k));
+
+  // Indicateurs
+  const k = $("b-kpis"); k.replaceChildren();
+  kpi(k, "Prévisions enregistrées", nf.format(HIST.length), HIST.length ? `${HIST.length - nRetro} en direct · ${nRetro} reconstituée(s)` : "la première sera enregistrée au prochain relevé");
+  kpi(k, "Depuis", HIST.length ? `${fDay.format(HIST[0].t)}` : "—", HIST.length ? `${fTime.format(HIST[0].t)} · une par heure de relevés` : "");
+  const ev = mods.map((m) => ({ m, r: evalModel(m.k, hIdx, bstate.s) })).filter((x) => x.r.n);
+  const best = ev.slice().sort((a, b) => a.r.mae - b.r.mae)[0];
+  kpi(k, `Vérifiées à +${bstate.h} h`, nf.format(ev.length ? Math.max(...ev.map((x) => x.r.n)) : 0), bstate.s === "all" ? "vérifications (une par lieu et par prévision) dont l'échéance est passée et relevée" : "prévisions dont l'échéance est passée et relevée");
+  kpi(k, `Le plus juste à +${bstate.h} h`, best ? best.m.name : "—", best ? `erreur moyenne ${nf1.format(best.r.mae)} voix${bstate.s === "all" ? " par lieu" : ""}` : "pas encore d'échéance vérifiable");
+
+  // Tableau : précision par horizon
+  const tbl = $("b-tbl"), thead = tbl.tHead, tbody = tbl.tBodies[0]; thead.replaceChildren(); tbody.replaceChildren();
+  const hr = el("tr", {}, thead); el("th", { text: "Horizon" }, hr);
+  for (const m of mods) el("th", { cls: "n", text: m.name }, hr);
+  const lbl = bstate.s === "all" ? "par lieu" : "";
+  BH.forEach((h, hi) => {
+    const r = el("tr", { cls: h === bstate.h ? "cur" : "", tabindex: 0, title: "Afficher cet horizon" }, tbody);
+    el("td", { text: `+${h} h` }, r);
+    const res = mods.map((m) => evalModel(m.k, hi, bstate.s));
+    const bestMae = Math.min(...res.filter((x) => x.n).map((x) => x.mae));
+    res.forEach((x, j) => {
+      const td = el("td", { cls: "n" }, r);
+      if (!x.n) { el("span", { cls: "zero", text: "—" }, td); return; }
+      const b = el("div", { text: `${nf1.format(x.mae)} voix` }, td); if (x.mae === bestMae && res.filter((y) => y.n).length > 1) b.style.fontWeight = "700";
+      el("div", { cls: "loc", text: `biais ${signed(x.bias, nf1)}${x.cover !== null ? ` · ${Math.round(x.cover * 100)} % dans la fourchette` : ""} · n = ${x.n}` }, td);
+      void j;
+    });
+    r.addEventListener("click", () => { bstate.h = h; saveB(); renderBilan(); });
+    r.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); bstate.h = h; saveB(); renderBilan(); } });
+  });
+  $("b-tbl-sub").textContent = `Erreur moyenne ${lbl} entre la prévision et les voix réellement relevées à l'échéance (en gras : la plus faible). Biais négatif = sous-estimation. `
+    + "« Dans la fourchette » : part des résultats tombés entre les 10 % et 90 % prévus, qui devrait être proche de 80 % si l'incertitude est bien estimée. "
+    + "Les échéances tombées dans un trou de relevé de plus d'1 h ne sont pas comptées.";
+
+  renderBilanChart(mods, hIdx);
+  renderBilanEnd(mods);
+}
+
+function bilanLegend(id, mods, extra) {
+  const lg = $(id); lg.replaceChildren();
+  const chip = (style, txt) => { const s0 = el("span", { cls: "chip ghost", style: "cursor:default" }, lg); const kk = el("span", { cls: "k" }, s0); kk.setAttribute("style", style); s0.append(txt); };
+  if (extra) chip(extra[0], extra[1]);
+  for (const m of mods) chip(`background:${m.col};height:8px;width:8px;border-radius:50%`, m.name);
+  chip("background:var(--ink2);opacity:.35;width:2px;height:12px", "Fourchette 10–90 % (modèles)");
+}
+
+function renderBilanChart(mods, hIdx) {
+  const box = $("b-chart"); box.replaceChildren();
+  const key = bstate.s === "all" ? "total" : bstate.s, name = key === "total" ? "le total des voix" : byIdP.get(key).name;
+  $("b-chart-sub").textContent = `Chaque point : ce qu'un modèle prévoyait ${bstate.h} h plus tôt pour ${name}, placé à l'heure de l'échéance. La courbe : les voix réellement relevées.`;
+  bilanLegend("b-legend", mods, ["background:var(--accent)", "Réel"]);
+  const pts = [];
+  for (const r of histRows()) {
+    const t = r.t + bstate.h * H; if (t > T[N - 1] + bstate.h * H) continue;
+    for (const m of mods) { const p = predOf(r, m.k, key, hIdx); if (p) pts.push({ m, r, t, p, a: actualAt(key, t) }); }
+  }
+  if (!pts.length) { el("div", { cls: "empty", text: "Pas encore de prévision enregistrée à cet horizon." }, box); return; }
+  const v = key === "total" ? total : byIdP.get(key).v;
+  const t0 = Math.min(...pts.map((q) => q.r.t)), t1 = Math.max(T[N - 1], ...pts.map((q) => q.t));
+  const i0 = idxAtOrAfter(t0);
+  const vals = [...v.slice(i0), ...pts.flatMap((q) => [q.p.c, q.p.lo ?? q.p.c, q.p.hi ?? q.p.c])];
+  const W = box.clientWidth || 900, Hh = 300, m = { l: 58, r: 14, t: 12, b: 28 }, iw = W - m.l - m.r, ih = Hh - m.t - m.b;
+  const yt = niceTicks(Math.min(...vals), Math.max(...vals), 5), y0 = yt[0], y1 = yt[yt.length - 1];
+  const x = (t) => m.l + (t - t0) / (t1 - t0 || 1) * iw, y = (val) => m.t + ih - (val - y0) / (y1 - y0 || 1) * ih;
+  const svg = el("svg:svg", { viewBox: `0 0 ${W} ${Hh}`, height: Hh, role: "img", "aria-label": "Prévisions comparées aux voix réelles" }, box);
+  for (let i = Math.max(1, i0); i < N; i++) if (T[i] - T[i - 1] > SKIP_MS) el("svg:rect", { cls: "gapband", x: x(T[i - 1]), y: m.t, width: Math.max(0, x(T[i]) - x(T[i - 1])), height: ih }, svg);
+  if (t1 > T[N - 1]) el("svg:rect", { x: x(T[N - 1]), y: m.t, width: x(t1) - x(T[N - 1]), height: ih, fill: "var(--accent-wash)", opacity: .5 }, svg);
+  for (const val of yt) { const g = el("svg:g", { cls: "tick" }, svg);
+    el("svg:line", { cls: "gridline", x1: m.l, x2: m.l + iw, y1: y(val), y2: y(val) }, g);
+    el("svg:text", { x: m.l - 8, y: y(val) + 3.5, "text-anchor": "end", text: nf.format(val) }, g); }
+  for (const t of timeTicks(t0, t1, Math.max(3, Math.floor(iw / 90)))) {
+    const g = el("svg:g", { cls: "tick" }, svg); el("svg:text", { x: x(t), y: Hh - 8, "text-anchor": "middle", text: (t1 - t0 > 20 * H ? fWd.format(t) + " " : "") + fTime.format(t) }, g); }
+  const d = pathFor(v.slice(i0), i0, x, y);
+  el("svg:path", { d: d.solid, fill: "none", stroke: "var(--accent)", "stroke-width": 2, "stroke-linejoin": "round" }, svg);
+  if (d.dashed) el("svg:path", { d: d.dashed, fill: "none", stroke: "var(--accent)", "stroke-width": 1.5, "stroke-dasharray": "2 3", opacity: .7 }, svg);
+  const off = (mk) => (mods.findIndex((q) => q.k === mk) - (mods.length - 1) / 2) * 4;   // décalage pour ne pas superposer
+  for (const mo of mods) {
+    const mine = pts.filter((q) => q.m === mo).sort((a, b) => a.t - b.t);
+    if (mine.length > 1) el("svg:path", { d: mine.map((q, i) => `${i ? "L" : "M"}${(x(q.t) + off(mo.k)).toFixed(1)},${y(q.p.c).toFixed(1)}`).join(""), fill: "none", stroke: mo.col, "stroke-width": 1, opacity: .45 }, svg);
+  }
+  const tip = tipFor(box);
+  for (const q of pts) {
+    const cx = x(q.t) + off(q.m.k);
+    if (q.p.lo !== null) el("svg:line", { x1: cx, x2: cx, y1: y(q.p.lo), y2: y(q.p.hi), stroke: q.m.col, "stroke-width": 2, opacity: .35 }, svg);
+    const c = el("svg:circle", { cx, cy: y(q.p.c), r: 4, fill: q.r.retro ? "var(--surface)" : q.m.col, stroke: q.m.col, "stroke-width": 1.8 }, svg);
+    c.addEventListener("pointermove", (ev) => {
+      tip.replaceChildren();
+      el("div", { cls: "h", text: `${q.m.name} · prévu le ${fDay.format(q.r.t)} à ${fTime.format(q.r.t)}${q.r.retro ? " (reconstituée)" : ""}` }, tip);
+      tipRow(tip, q.m.col, nf.format(Math.round(q.p.c)), `prévu pour ${fDay.format(q.t)} ${fTime.format(q.t)}`);
+      if (q.p.lo !== null) tipRow(tip, null, `${nf.format(Math.round(q.p.lo))} – ${nf.format(Math.round(q.p.hi))}`, "fourchette 10–90 %");
+      if (q.a !== null) { tipRow(tip, "var(--accent)", nf.format(Math.round(q.a)), "réel"); tipRow(tip, null, signed(Math.round(q.p.c - q.a)), "erreur"); }
+      else tipRow(tip, null, "—", q.t > T[N - 1] ? "échéance pas encore atteinte" : "échéance dans un trou de relevé");
+      const br = box.getBoundingClientRect(); tip.hidden = false; placeTip(tip, box, ev.clientX - br.left, ev.clientY - br.top);
+    });
+    c.addEventListener("pointerleave", () => (tip.hidden = true));
+  }
+}
+
+function renderBilanEnd(mods) {
+  const box = $("b-end"); box.replaceChildren();
+  const key = bstate.s === "all" ? "total" : bstate.s, last = BH.length;
+  const rows = histRows();
+  const end = rows.length ? rows[rows.length - 1].end : null, closed = end && T[N - 1] >= end;
+  $("b-end-sub").textContent = `Ce que chaque modèle prévoyait pour ${key === "total" ? "le total des voix" : byIdP.get(key).name} à la clôture, à chaque prévision enregistrée. `
+    + (closed ? "La ligne horizontale est le résultat final." : "Une prévision qui se stabilise d'heure en heure est plus crédible qu'une prévision qui saute.");
+  bilanLegend("b-end-legend", mods, closed ? ["background:var(--accent)", "Résultat final"] : null);
+  const pts = [];
+  for (const r of rows) for (const m of mods) { const p = predOf(r, m.k, key, last); if (p) pts.push({ m, r, p }); }
+  if (!pts.length) { el("div", { cls: "empty", text: "Pas encore de prévision enregistrée." }, box); return; }
+  const fin = closed ? actualAt(key, Math.min(end, T[N - 1])) : null;
+  const vals = pts.flatMap((q) => [q.p.c, q.p.lo ?? q.p.c, q.p.hi ?? q.p.c]).concat(fin !== null ? [fin] : []);
+  const t0 = Math.min(...pts.map((q) => q.r.t)), t1 = Math.max(...pts.map((q) => q.r.t), t0 + H);
+  const W = box.clientWidth || 900, Hh = 260, m = { l: 58, r: 14, t: 12, b: 28 }, iw = W - m.l - m.r, ih = Hh - m.t - m.b;
+  const yt = niceTicks(Math.min(...vals), Math.max(...vals), 5), y0 = yt[0], y1 = yt[yt.length - 1];
+  const x = (t) => m.l + (t - t0) / (t1 - t0) * iw, y = (val) => m.t + ih - (val - y0) / (y1 - y0 || 1) * ih;
+  const svg = el("svg:svg", { viewBox: `0 0 ${W} ${Hh}`, height: Hh, role: "img", "aria-label": "Prévision de la clôture au fil du temps" }, box);
+  for (const val of yt) { const g = el("svg:g", { cls: "tick" }, svg);
+    el("svg:line", { cls: "gridline", x1: m.l, x2: m.l + iw, y1: y(val), y2: y(val) }, g);
+    el("svg:text", { x: m.l - 8, y: y(val) + 3.5, "text-anchor": "end", text: nf.format(val) }, g); }
+  for (const t of timeTicks(t0, t1, Math.max(3, Math.floor(iw / 90)))) {
+    const g = el("svg:g", { cls: "tick" }, svg); el("svg:text", { x: x(t), y: Hh - 8, "text-anchor": "middle", text: (t1 - t0 > 20 * H ? fWd.format(t) + " " : "") + fTime.format(t) }, g); }
+  if (fin !== null) el("svg:line", { x1: m.l, x2: m.l + iw, y1: y(fin), y2: y(fin), stroke: "var(--accent)", "stroke-width": 2 }, svg);
+  const off = (mk) => (mods.findIndex((q) => q.k === mk) - (mods.length - 1) / 2) * 4, tip = tipFor(box);
+  for (const mo of mods) {
+    const mine = pts.filter((q) => q.m === mo).sort((a, b) => a.r.t - b.r.t);
+    if (mine.length > 1) el("svg:path", { d: mine.map((q, i) => `${i ? "L" : "M"}${(x(q.r.t) + off(mo.k)).toFixed(1)},${y(q.p.c).toFixed(1)}`).join(""), fill: "none", stroke: mo.col, "stroke-width": 1.5, opacity: .7 }, svg);
+  }
+  for (const q of pts) {
+    const cx = x(q.r.t) + off(q.m.k);
+    if (q.p.lo !== null) el("svg:line", { x1: cx, x2: cx, y1: y(q.p.lo), y2: y(q.p.hi), stroke: q.m.col, "stroke-width": 2, opacity: .35 }, svg);
+    const c = el("svg:circle", { cx, cy: y(q.p.c), r: 4, fill: q.r.retro ? "var(--surface)" : q.m.col, stroke: q.m.col, "stroke-width": 1.8 }, svg);
+    c.addEventListener("pointermove", (ev) => {
+      tip.replaceChildren();
+      el("div", { cls: "h", text: `${q.m.name} · prévu le ${fDay.format(q.r.t)} à ${fTime.format(q.r.t)}${q.r.retro ? " (reconstituée)" : ""}` }, tip);
+      tipRow(tip, q.m.col, nf.format(Math.round(q.p.c)), "prévu à la clôture");
+      if (q.p.lo !== null) tipRow(tip, null, `${nf.format(Math.round(q.p.lo))} – ${nf.format(Math.round(q.p.hi))}`, "fourchette 10–90 %");
+      if (fin !== null) tipRow(tip, "var(--accent)", nf.format(Math.round(fin)), "résultat final");
+      const br = box.getBoundingClientRect(); tip.hidden = false; placeTip(tip, box, ev.clientX - br.left, ev.clientY - br.top);
+    });
+    c.addEventListener("pointerleave", () => (tip.hidden = true));
+  }
+}
+$("b-sel").addEventListener("change", (e) => { bstate.s = e.target.value; saveB(); renderBilan(); });
+$("seg-bh").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; bstate.h = +b.dataset.v; saveB(); renderBilan(); });
+$("seg-bsrc").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; bstate.src = b.dataset.v; saveB(); renderBilan(); });
+
 /* ---------- pages ---------- */
-const onAnom = () => location.hash === "#anomalies";
+const PAGES = { "#anomalies": ["anom", "Anomalies · "], "#bilan": ["bilan", "Bilan des prévisions · "] };
+const curPage = () => (PAGES[location.hash] || ["main", ""])[0];
+const onAnom = () => curPage() === "anom";
+const renderCur = () => { const pg = curPage(); if (pg === "anom") renderAnom(); else if (pg === "bilan") renderBilan(); else render(); };
 function showPage(initial) {
-  const an = onAnom();
-  $("page-main").hidden = an; $("page-anom").hidden = !an;
-  $("tab-main").removeAttribute("aria-current"); $("tab-anom").removeAttribute("aria-current");
-  $(an ? "tab-anom" : "tab-main").setAttribute("aria-current", "page");
-  document.title = an ? "Anomalies · Suivi SOS Calvaires" : "Suivi SOS Calvaires";
-  if (an) renderAnom(); else if (!initial) render();   // les graphiques se recalent sur la largeur visible
+  const pg = curPage();
+  for (const k of ["main", "anom", "bilan"]) { $("page-" + k).hidden = k !== pg; $("tab-" + k).removeAttribute("aria-current"); }
+  $("tab-" + pg).setAttribute("aria-current", "page");
+  document.title = (PAGES[location.hash] || [0, ""])[1] + "Suivi SOS Calvaires";
+  if (pg !== "main" || !initial) renderCur();   // les graphiques se recalent sur la largeur visible
 }
 $("tab-main").addEventListener("click", (e) => { e.preventDefault(); history.replaceState(null, "", location.pathname + location.search); showPage(); });
 window.addEventListener("hashchange", showPage);
@@ -1891,7 +2164,7 @@ showPage(true); anomBadge();
 let rz, lastW = document.querySelector(".wrap").clientWidth;
 new ResizeObserver(() => {
   const w = document.querySelector(".wrap").clientWidth; if (w === lastW) return; lastW = w;
-  clearTimeout(rz); rz = setTimeout(() => (onAnom() ? renderAnom() : render()), 80);
+  clearTimeout(rz); rz = setTimeout(renderCur, 80);
 }).observe(document.querySelector(".wrap"));
 })();
 </script>

@@ -53,6 +53,18 @@ def forecast_safe(wide):
         return {"ok": False, "why": "Prévision indisponible pour ce relevé."}
 
 
+def history_safe(fc, wide):
+    """Enregistre la prévision du moment (une fois par heure) et renvoie tout l'historique pour la page Bilan."""
+    try:
+        from prevision import load_history, record
+        if fc.get("ok") and fc.get("models"):
+            record(fc, wide)
+        return load_history()
+    except Exception as e:  # noqa: BLE001
+        print(f"[historique des prévisions] échec : {e!r}")
+        return []
+
+
 def build_html(wide, meta):
     places = []
     for pid in wide.columns:
@@ -64,11 +76,13 @@ def build_html(wide, meta):
             "dept": m["departement"] if isinstance(m["departement"], str) else "",
             "v": [int(x) for x in wide[pid].tolist()],
         })
+    fc = forecast_safe(wide)
     data = {
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "t": [int(ts.timestamp() * 1000) for ts in wide.index],
         "places": places,
-        "fc": forecast_safe(wide),
+        "fc": fc,
+        "hist": history_safe(fc, wide),
     }
     payload = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     html = TEMPLATE.read_text(encoding="utf-8").replace("/*__DATA__*/{}", payload)

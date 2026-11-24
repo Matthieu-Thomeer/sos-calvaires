@@ -29,6 +29,6 @@ jobs:
         run: |
           git config user.name "suivi-votes-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add votes.csv votes_cumul.png votes_delta.png votes_normalise.png votes_total.png dashboard.html couleurs.json
+          git add votes.csv votes_cumul.png votes_delta.png votes_normalise.png votes_total.png dashboard.html couleurs.json previsions.jsonl
           git diff --cached --quiet || git commit -m "relevé $(date -u +%FT%TZ)"
           git pull --rebase --quiet && git push

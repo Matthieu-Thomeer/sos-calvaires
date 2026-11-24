@@ -25,7 +25,8 @@ Le modèle est confronté à la projection linéaire par un test rétrospectif :
 puis comparaison avec ce qui s'est réellement passé.
 
 Usage :
-  python prevision.py            # affiche le bilan dans le terminal
+  python prevision.py                  # affiche le bilan dans le terminal
+  python prevision.py --reconstituer   # recalcule les prévisions passées (une par heure) pour l'historique
 Appelé aussi par dashboard.py, qui intègre la prévision au tableau de bord.
 """
 import math
@@ -547,7 +548,7 @@ def horizon_h(wide):
 MODELES = {"jn": "Jour/nuit", "jnb": "Jour/nuit/boulot"}
 
 
-def forecast(wide):
+def forecast(wide, backtests=True):
     """Tout ce que le tableau de bord affiche, pour les deux modèles : fits, projections, test rétrospectif."""
     t0, th = _times(wide)
     if len(th) < 8 or th[-1] < 3:
@@ -596,7 +597,7 @@ def forecast(wide):
             m["lam"], m["kap"] = tot.lam, tot.kap
             num, den = tot.empirical()
             m["emp"] = [[h, round(float(num[h] / den[h]), 3), round(float(den[h]), 1)] for h in range(24) if den[h] > 0.5]
-        bt = backtest(wide, fitter=fitter)
+        bt = backtest(wide, fitter=fitter) if backtests else None
         if bt:
             m["bt"] = {k: bt[k] for k in ("hours", "cut", "mae", "bias", "gain")}
         return m
@@ -616,6 +617,114 @@ def forecast(wide):
         "models": models,
         "best": min(mae, key=mae.get) if mae else "jn",
     }
+
+
+# ---------------------------------------------------------------- mémoire des prévisions
+# À chaque génération du tableau de bord (au plus une fois par heure de données), on garde ce que chaque modèle
+# prévoit à quelques horizons et à la clôture. La page « Bilan des prévisions » les confronte ensuite aux voix réelles.
+HIST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "previsions.jsonl")
+HIST_H = (1, 3, 6, 12, 24, 48)
+HIST_MIN_GAP_H = 55 / 60
+
+
+def snapshot(fc, wide, retro=False):
+    """Une ligne d'historique : prévisions [centre, p10, p90] (modèles) ou centre (droites), par horizon puis clôture."""
+    if not fc.get("ok"):
+        return None
+    t0, th = _times(wide)
+    t_last = int(wide.index[-1].timestamp() * 1000)
+    G = np.array(fc["grid"], float)
+    ids = list(wide.columns)
+    targets = [t_last + h * 3600e3 for h in HIST_H]
+
+    def at(arr, t):
+        return None if t > G[-1] + 1 else round(float(np.interp(t, G, arr)), 1)
+
+    def model_rows(series):
+        row = [[at(series[k], t) for k in ("c", "q10", "q90")] for t in targets]
+        row.append([round(float(series[k][-1]), 1) for k in ("c", "q10", "q90")])
+        return [None if r[0] is None else r for r in row]
+
+    m = {}
+    for key, md in fc["models"].items():
+        m[key] = {"total": model_rows(md["total"]), "p": [model_rows(md["places"][pid]) for pid in ids]}
+
+    def lin_rows(v, basis):
+        r = _linear(v, th, basis)
+        row = [None if t > G[-1] + 1 else round(float(v[-1] + r * h), 1) for h, t in zip(HIST_H, targets)]
+        row.append(round(float(v[-1] + r * (G[-1] - t_last) / 3600e3), 1))
+        return row
+
+    tot = wide.sum(axis=1).values
+    for key, basis in (("lin", None), ("lin3", 3)):
+        m[key] = {"total": lin_rows(tot, basis), "p": [lin_rows(wide[pid].values, basis) for pid in ids]}
+    return {"t": t_last, "retro": retro, "end": fc["end"], "h": list(HIST_H), "ids": ids, "m": m}
+
+
+def load_history():
+    out = []
+    if os.path.exists(HIST_PATH):
+        import json
+        with open(HIST_PATH, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        out.append(json.loads(line))
+                    except ValueError:
+                        pass
+    return sorted(out, key=lambda r: r["t"])
+
+
+def _write_history(rows):
+    import json
+    tmp = HIST_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        for r in sorted(rows, key=lambda r: r["t"]):
+            f.write(json.dumps(r, ensure_ascii=False, separators=(",", ":")) + "\n")
+    os.replace(tmp, HIST_PATH)
+
+
+def record(fc, wide):
+    """Ajoute la prévision du jour à l'historique si la dernière enregistrée a plus de 55 min (en temps de données)."""
+    rows = load_history()
+    snap = snapshot(fc, wide)
+    if snap is None:
+        return False
+    if rows and snap["t"] - max(r["t"] for r in rows) < HIST_MIN_GAP_H * 3600e3:
+        return False
+    rows.append(snap)
+    _write_history(rows)
+    return True
+
+
+def reconstituer(step_h=1.0):
+    """Recalcule les prévisions qu'on aurait faites dans le passé (une par heure de données), marquées « reconstituées ».
+
+    Chaque prévision n'utilise que les relevés disponibles à son instant : c'est un vrai test, pas un ajustement a posteriori.
+    """
+    from dashboard import load
+
+    wide, _ = load()
+    rows = load_history()
+    known = [r["t"] for r in rows]
+    t = np.array([x.timestamp() * 1000 for x in wide.index])
+    last = -np.inf
+    picks = []
+    for i in range(len(t)):
+        if t[i] - t[0] >= 3 * 3600e3 and t[i] - last >= step_h * 3600e3 - 60e3:
+            picks.append(i)
+            last = t[i]
+    picks = [i for i in picks if i < len(t) - 1 and all(abs(t[i] - k) > HIST_MIN_GAP_H * 3600e3 for k in known)]
+    print(f"{len(picks)} prévisions à reconstituer")
+    for n, i in enumerate(picks, 1):
+        sub = wide.iloc[: i + 1]
+        fc = forecast(sub, backtests=False)
+        snap = snapshot(fc, sub, retro=True)
+        if snap:
+            rows.append(snap)
+            _write_history(rows)
+        print(f"  {n}/{len(picks)} {wide.index[i]}", flush=True)
 
 
 # ---------------------------------------------------------------- terminal
@@ -655,4 +764,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    if "--reconstituer" in sys.argv:
+        reconstituer()
+    else:
+        main()
